@@ -57,15 +57,25 @@
     <div class="absolute inset-0 bg-grid-cyan"></div>
     <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
     <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 blur-[120px] rounded-full"></div>
+    <div class="absolute top-1/4 left-10 opacity-20 transform -rotate-12">
+      <div class="w-12 h-12 border-2 border-primary-container shadow-[0_0_15px_rgba(0,255,255,0.3)]"></div>
+      <div class="w-12 h-12 border-2 border-primary-container mt-[-2px] shadow-[0_0_15px_rgba(0,255,255,0.3)]"></div>
+      <div class="w-12 h-12 border-2 border-primary-container mt-[-2px] shadow-[0_0_15px_rgba(0,255,255,0.3)]"></div>
+    </div>
+    <div class="absolute bottom-1/4 right-20 opacity-20 transform rotate-45">
+      <div class="flex">
+        <div class="w-10 h-10 border-2 border-secondary shadow-[0_0_15px_rgba(255,81,250,0.3)]"></div>
+        <div class="w-10 h-10 border-2 border-secondary ml-[-2px] shadow-[0_0_15px_rgba(255,81,250,0.3)]"></div>
+      </div>
+      <div class="flex mt-[-2px]">
+        <div class="w-10 h-10 border-2 border-secondary shadow-[0_0_15px_rgba(255,81,250,0.3)]"></div>
+        <div class="w-10 h-10 border-2 border-secondary ml-[-2px] shadow-[0_0_15px_rgba(255,81,250,0.3)]"></div>
+      </div>
+    </div>
   </div>
 
-  <header class="relative z-10 w-full pt-8 pb-4">
-    <div class="flex justify-center items-center w-full px-6 max-w-screen-xl mx-auto">
-      <h1 class="font-headline text-6xl md:text-8xl font-black italic tracking-tighter text-primary neon-glow-primary leading-none">TYPE-TRIS</h1>
-    </div>
-  </header>
-
-  <main class="relative z-10 flex flex-col items-center justify-center px-6 py-12 min-h-[calc(100vh-160px)]">
+  <main class="relative z-10 flex flex-col items-center justify-center px-6 py-10 min-h-screen">
+    <h1 class="mb-6 font-headline text-6xl md:text-8xl font-black italic tracking-tighter text-primary neon-glow-primary leading-none">TYPE-TRIS</h1>
     <div class="w-full max-w-md bg-surface-container border border-outline-variant/20 shadow-2xl backdrop-blur-md">
       <div class="p-6 pb-0 flex items-center justify-between">
         <a href="index.html" class="group flex items-center justify-center p-2 hover:bg-surface-bright transition-all active:scale-95">
@@ -95,11 +105,17 @@
         <div class="pt-4 space-y-6">
           <button class="w-full py-4 bg-primary-container text-on-primary font-headline font-bold uppercase tracking-widest text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)]" type="submit">LOGIN</button>
           <div class="text-center space-y-3">
-            <p class="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">NEW PLAYER? <a class="text-secondary font-bold hover:text-white transition-colors ml-1" href="#">REGISTER NEW ACCOUNT</a></p>
+            <p class="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">NEW PLAYER? <a class="text-secondary font-bold hover:text-white transition-colors ml-1" href="register.html">REGISTER NEW ACCOUNT</a></p>
             <p class="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant"><a class="text-on-surface-variant hover:text-white transition-colors" href="parental.html">PARENT/TEACHER LOGIN</a></p>
           </div>
         </div>
       </form>
+    </div>
+    <div class="mt-8 flex gap-4">
+      <div class="w-3 h-3 bg-primary"></div>
+      <div class="w-3 h-3 bg-secondary"></div>
+      <div class="w-3 h-3 bg-tertiary"></div>
+      <div class="w-3 h-3 bg-primary-container"></div>
     </div>
   </main>
 </body>
