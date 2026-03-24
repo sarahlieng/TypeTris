@@ -22,11 +22,15 @@ Then visit [http://localhost:8080](http://localhost:8080).
 
 ## Project layout
 
-| File        | Purpose                          |
-|------------|-----------------------------------|
-| `index.html` | Main menu + placeholder screens (login, scores, instructions, parental) |
+| File | Purpose |
+|---|---|
+| `index.html` | Main menu |
+| `login.html` | Login screen |
+| `highscores.html` | High scores page |
+| `instructions.html` | Instructions page |
+| `parental.html` | Parental/teacher controls page |
 
-Buttons use `data-nav` / `data-back` and a small inline script to swap screens. Replace placeholders with calls to your Java backend (REST, WebSocket, etc.) when you integrate.
+Navigation now uses normal links between pages (multi-page setup), which is easier to scale for many screens.
 
 ## Course note
 

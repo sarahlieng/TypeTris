@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TYPE-TRIS | Login</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-dim": "#00e6e6",
+            "tertiary": "#8eff71",
+            "primary": "#c1fffe",
+            "outline-variant": "#45484f",
+            "surface": "#0b0e14",
+            "secondary": "#ff51fa",
+            "error": "#ff6e84",
+            "surface-container-lowest": "#000000",
+            "primary-container": "#00ffff",
+            "on-background": "#ecedf6",
+            "on-primary": "#006767",
+            "outline": "#73757d",
+            "on-surface-variant": "#a9abb3",
+            "surface-container-high": "#1c2028",
+            "surface-container-low": "#10131a",
+            "surface-container": "#161a21",
+            "on-surface": "#ecedf6"
+          },
+          fontFamily: {
+            "headline": ["Space Grotesk"],
+            "body": ["Manrope"],
+            "label": ["Plus Jakarta Sans"]
+          },
+          borderRadius: { "DEFAULT": "0rem", "lg": "0rem", "xl": "0rem", "full": "9999px" }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; }
+    .bg-grid-cyan {
+      background-size: 40px 40px;
+      background-image:
+        linear-gradient(to right, rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    }
+    .neon-glow-primary { text-shadow: 0 0 10px rgba(193, 255, 254, 0.8), 0 0 20px rgba(0, 255, 255, 0.4); }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body min-h-screen overflow-x-hidden selection:bg-primary-container selection:text-on-primary">
+  <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    <div class="absolute inset-0 bg-grid-cyan"></div>
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 blur-[120px] rounded-full"></div>
+  </div>
+
+  <header class="relative z-10 w-full pt-8 pb-4">
+    <div class="flex justify-center items-center w-full px-6 max-w-screen-xl mx-auto">
+      <h1 class="font-headline text-6xl md:text-8xl font-black italic tracking-tighter text-primary neon-glow-primary leading-none">TYPE-TRIS</h1>
+    </div>
+  </header>
+
+  <main class="relative z-10 flex flex-col items-center justify-center px-6 py-12 min-h-[calc(100vh-160px)]">
+    <div class="w-full max-w-md bg-surface-container border border-outline-variant/20 shadow-2xl backdrop-blur-md">
+      <div class="p-6 pb-0 flex items-center justify-between">
+        <a href="index.html" class="group flex items-center justify-center p-2 hover:bg-surface-bright transition-all active:scale-95">
+          <span class="material-symbols-outlined text-primary-dim">arrow_back</span>
+        </a>
+        <h2 class="font-headline font-bold text-2xl tracking-tight text-primary uppercase">Login</h2>
+        <div class="w-10"></div>
+      </div>
+      <form action="#" class="p-8 space-y-6" method="POST">
+        <div class="space-y-2">
+          <label class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">Username</label>
+          <div class="relative group">
+            <input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline focus:border-primary-container focus:ring-0 text-on-surface placeholder:text-outline-variant font-body py-3 transition-all" placeholder="Enter your username" type="text" />
+            <div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary-container transition-all duration-300 group-focus-within:w-full"></div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between items-end">
+            <label class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant block">Password</label>
+            <a class="font-label text-[10px] uppercase tracking-[0.1em] text-secondary hover:text-white transition-colors" href="#">Forgot Password?</a>
+          </div>
+          <div class="relative group">
+            <input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline focus:border-primary-container focus:ring-0 text-on-surface placeholder:text-outline-variant font-body py-3 transition-all" placeholder="Enter your password" type="password" />
+            <div class="absolute bottom-0 left-0 h-[2px] w-0 bg-primary-container transition-all duration-300 group-focus-within:w-full"></div>
+          </div>
+        </div>
+        <div class="pt-4 space-y-6">
+          <button class="w-full py-4 bg-primary-container text-on-primary font-headline font-bold uppercase tracking-widest text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)]" type="submit">LOGIN</button>
+          <div class="text-center space-y-3">
+            <p class="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant">NEW PLAYER? <a class="text-secondary font-bold hover:text-white transition-colors ml-1" href="#">REGISTER NEW ACCOUNT</a></p>
+            <p class="font-label text-[10px] uppercase tracking-[0.1em] text-on-surface-variant"><a class="text-on-surface-variant hover:text-white transition-colors" href="parental.html">PARENT/TEACHER LOGIN</a></p>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>
