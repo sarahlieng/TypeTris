@@ -5,38 +5,10 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
   <title>TYPE-TRIS | Main Menu</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="assets/js/tailwind.config.js"></script>
+  <script defer src="assets/js/app.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200&amp;display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "surface": "#0b0e14",
-            "surface-container": "#161a21",
-            "surface-container-high": "#1c2028",
-            "surface-bright": "#282c36",
-            "on-surface": "#ecedf6",
-            "on-surface-variant": "#a9abb3",
-            "outline": "#73757d",
-            "outline-variant": "#45484f",
-            "primary": "#c1fffe",
-            "primary-container": "#00ffff",
-            "secondary": "#ff51fa",
-            "tertiary": "#8eff71",
-            "error": "#ff6e84",
-            "on-primary": "#006767"
-          },
-          fontFamily: {
-            "headline": ["Space Grotesk"],
-            "body": ["Manrope"],
-            "label": ["Plus Jakarta Sans"]
-          }
-        }
-      }
-    }
-  </script>
   <style>
     .material-symbols-outlined {
       font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
@@ -153,7 +125,7 @@
         <span class="font-headline font-bold text-lg tracking-widest uppercase">PARENTAL/TEACHER CONTROLS</span>
         <span class="material-symbols-outlined text-tertiary">lock_person</span>
       </a>
-      <button type="button" onclick="window.close()" class="group flex items-center justify-center gap-2 text-on-surface-variant hover:text-error transition-all duration-150 py-2 mt-2">
+      <button type="button" data-exit="app" class="group flex items-center justify-center gap-2 text-on-surface-variant hover:text-error transition-all duration-150 py-2 mt-2">
         <span class="font-headline font-bold text-sm tracking-widest uppercase">EXIT GAME</span>
         <span class="material-symbols-outlined text-sm">logout</span>
       </button>

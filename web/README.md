@@ -2,14 +2,30 @@
 
 The **primary menu and screen flow** for Type-tris live here as **HTML + Tailwind (CDN)** so the interface matches your design in the browser.
 
-## View locally
+## Run with backend (recommended)
+
+From the repo root:
+
+```bash
+mvn exec:java
+```
+
+Then open [http://localhost:8080](http://localhost:8080).
+
+This serves the web UI and enables:
+- `POST /api/register` (stores account in SQLite)
+- `POST /api/login` (verifies credentials)
+
+Database file is created at `data/type-tris.db`.
+
+## View frontend only
 
 **Option A — open the file**
 
 - Double-click `index.html`, or drag it into Chrome / Firefox / Edge.  
 - **Note:** Tailwind and fonts load from the CDN; you need **internet** the first time.
 
-**Option B — local server (recommended)**
+**Option B — local server (no Java API)**
 
 From the repo root:
 

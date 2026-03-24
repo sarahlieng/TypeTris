@@ -1,12 +1,11 @@
 package typetris;
 
+import java.nio.file.Path;
+import typetris.backend.WebServer;
+
 /**
  * Application entry point for Type-tris.
- * <p>
- * The <strong>graphical menu</strong> is implemented with Tailwind in {@code web/index.html}.
- * Run that file in a browser (see {@code web/README.md}) for the intended UI.
- * <p>
- * This class remains for team members who start the JVM for backend logic or tests without Swing.
+ * Starts local web server for frontend + auth APIs.
  *
  * @author CS2212 Group 26, Western University
  */
@@ -16,13 +15,24 @@ public final class App {
     }
 
     /**
-     * Prints where to open the web UI. Does not start Swing.
+     * Starts local server and serves /web files and /api routes.
      *
      * @param args unused
      */
     public static void main(String[] args) {
-        System.out.println("TYPE-TRIS");
-        System.out.println("Open the Tailwind UI: web/index.html (see web/README.md).");
-        System.out.println("Example: cd web && python3 -m http.server 8080  →  http://localhost:8080");
+        int port = 8080;
+        Path webRoot = Path.of("web");
+        Path dbPath = Path.of("data", "type-tris.db");
+        WebServer server = new WebServer(port, webRoot, dbPath);
+
+        try {
+            server.start();
+            System.out.println("TYPE-TRIS backend started.");
+            System.out.println("Open: http://localhost:" + port);
+            System.out.println("Database: " + dbPath.toAbsolutePath());
+        } catch (Exception e) {
+            System.err.println("Failed to start TYPE-TRIS backend: " + e.getMessage());
+            e.printStackTrace(System.err);
+        }
     }
 }
