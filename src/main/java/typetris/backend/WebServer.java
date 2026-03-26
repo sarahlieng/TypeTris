@@ -8,12 +8,15 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.List;
 
 /**
  * Minimal local HTTP server for static web UI + auth API.
@@ -34,12 +37,22 @@ public final class WebServer {
 
     /**
      * Starts the server and initializes schema.
+     *
+     * <p>Routes:
+     * <ul>
+     *   <li>`POST /api/register`</li>
+     *   <li>`POST /api/login`</li>
+     *   <li>`GET /api/personal-stats?username=...`</li>
+     *   <li>`GET /api/leaderboard?limit=...`</li>
+     * </ul>
      */
     public void start() throws IOException, SQLException {
         authRepository.init();
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/api/register", new RegisterHandler());
         server.createContext("/api/login", new LoginHandler());
+        server.createContext("/api/personal-stats", new PersonalStatsHandler());
+        server.createContext("/api/leaderboard", new LeaderboardHandler());
         server.createContext("/", new StaticHandler());
         server.setExecutor(null);
         server.start();
@@ -127,6 +140,79 @@ public final class WebServer {
         }
     }
 
+    private final class PersonalStatsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("ok", false, "error", "Method not allowed"));
+                return;
+            }
+
+            // Expected query: ?username=<player username>
+            Map<String, String> query = parseQueryParams(exchange.getRequestURI().getQuery());
+            String username = trim(query.get("username"));
+            if (username.isEmpty()) {
+                sendJson(exchange, 400, Map.of("ok", false, "error", "Missing username."));
+                return;
+            }
+
+            try {
+                PlayerAccount player = authRepository.findPlayerAccount(username);
+                if (player == null) {
+                    sendJson(exchange, 404, Map.of("ok", false, "error", "Player not found."));
+                    return;
+                }
+                sendJson(exchange, 200, Map.of("ok", true, "player", player));
+            } catch (SQLException e) {
+                sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
+            }
+        }
+    }
+
+    private final class LeaderboardHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("ok", false, "error", "Method not allowed"));
+                return;
+            }
+
+            // Optional query: ?limit=<n> (defaults to 10)
+            Map<String, String> query = parseQueryParams(exchange.getRequestURI().getQuery());
+            int limit = 10;
+            String rawLimit = trim(query.get("limit"));
+            if (!rawLimit.isEmpty()) {
+                try {
+                    limit = Integer.parseInt(rawLimit);
+                } catch (NumberFormatException e) {
+                    sendJson(exchange, 400, Map.of("ok", false, "error", "Invalid limit."));
+                    return;
+                }
+            }
+
+            try {
+                Leaderboard leaderboard = new Leaderboard(authRepository);
+                List<PlayerAccount> top = leaderboard.getTopPlayers(limit);
+
+                List<Map<String, Object>> out = new ArrayList<>();
+                for (int i = 0; i < top.size(); i++) {
+                    PlayerAccount p = top.get(i);
+                    out.add(Map.of(
+                            "rank", i + 1,
+                            "username", p.username(),
+                            "highScore", p.highScore(),
+                            "bestWPM", p.bestWPM(),
+                            "avgAccuracy", p.avgAccuracy()
+                    ));
+                }
+
+                sendJson(exchange, 200, Map.of("ok", true, "leaderboard", out));
+            } catch (SQLException e) {
+                sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
+            }
+        }
+    }
+
     private final class StaticHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -173,6 +259,29 @@ public final class WebServer {
         exchange.sendResponseHeaders(status, data.length);
         exchange.getResponseBody().write(data);
         exchange.close();
+    }
+
+    private Map<String, String> parseQueryParams(String query) {
+        Map<String, String> out = new HashMap<>();
+        if (query == null || query.isBlank()) {
+            return out;
+        }
+        // Very small query parser: splits on '&' and then '=' (no support for repeated keys).
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            if (pair.isBlank()) {
+                continue;
+            }
+            String[] kv = pair.split("=", 2);
+            String key = decode(kv[0]);
+            String value = kv.length > 1 ? decode(kv[1]) : "";
+            out.put(key, value);
+        }
+        return out;
+    }
+
+    private static String decode(String s) {
+        return URLDecoder.decode(s, StandardCharsets.UTF_8);
     }
 
     private static String trim(String v) {
