@@ -1,0 +1,211 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>TypeTris - How To Play</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+  <style>
+          .material-symbols-outlined {
+              font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+          }
+          body {
+              background-color: #0b0e14;
+              overflow-x: hidden;
+          }
+          .glow-line {
+              box-shadow: 0 0 20px rgba(193, 255, 254, 0.6);
+          }
+          .magenta-glow {
+              text-shadow: 0 0 10px rgba(255, 81, 250, 0.5);
+          }
+      </style>
+  <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-surface": "#ecedf6",
+                "tertiary-container": "#2ff801",
+                "on-background": "#ecedf6",
+                "surface-variant": "#22262f",
+                "tertiary-dim": "#2be800",
+                "on-tertiary": "#0d6100",
+                "on-secondary-fixed-variant": "#920091",
+                "surface-container-highest": "#22262f",
+                "on-secondary": "#400040",
+                "primary-dim": "#00e6e6",
+                "outline": "#73757d",
+                "on-error-container": "#ffb2b9",
+                "tertiary-fixed-dim": "#2be800",
+                "outline-variant": "#45484f",
+                "on-primary-fixed": "#004343",
+                "secondary-dim": "#ff51fa",
+                "secondary": "#ff51fa",
+                "primary-container": "#00ffff",
+                "surface-dim": "#0b0e14",
+                "on-tertiary-fixed": "#064200",
+                "on-error": "#490013",
+                "inverse-on-surface": "#52555c",
+                "inverse-surface": "#f9f9ff",
+                "on-secondary-container": "#fff5f9",
+                "on-tertiary-fixed-variant": "#0d6200",
+                "primary": "#c1fffe",
+                "secondary-container": "#a900a9",
+                "on-primary-container": "#005d5d",
+                "primary-fixed": "#00f5f5",
+                "surface": "#0b0e14",
+                "primary-fixed-dim": "#00e6e6",
+                "inverse-primary": "#006a6a",
+                "on-secondary-fixed": "#620061",
+                "surface-container-low": "#10131a",
+                "error-dim": "#d73357",
+                "secondary-fixed": "#ffbdf3",
+                "on-primary-fixed-variant": "#006262",
+                "secondary-fixed-dim": "#ffa6f3",
+                "on-tertiary-container": "#0b5800",
+                "on-surface-variant": "#a9abb3",
+                "tertiary": "#8eff71",
+                "error-container": "#a70138",
+                "error": "#ff6e84",
+                "surface-container-high": "#1c2028",
+                "surface-tint": "#c1fffe",
+                "surface-container-lowest": "#000000",
+                "background": "#0b0e14",
+                "surface-bright": "#282c36",
+                "on-primary": "#006767",
+                "surface-container": "#161a21",
+                "tertiary-fixed": "#2ff801"
+              },
+              fontFamily: {
+                "headline": ["Space Grotesk"],
+                "body": ["Manrope"],
+                "label": ["Plus Jakarta Sans"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+      </script>
+  </head>
+  <body class="bg-surface text-on-surface font-body min-h-screen flex flex-col relative overflow-hidden">
+  <!-- Background Elements -->
+  <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+  <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-secondary-container/10 rounded-full blur-[120px]"></div>
+  <div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-primary-container/5 rounded-full blur-[150px]"></div>
+  <!-- Floating Tetrominoes (Simplified Representation) -->
+  <div class="absolute top-20 right-[15%] w-12 h-12 border-2 border-primary/20 rotate-12"></div>
+  <div class="absolute bottom-40 left-[10%] w-16 h-8 border-2 border-secondary/20 -rotate-45"></div>
+  <div class="absolute top-1/2 left-[5%] w-10 h-10 border-2 border-tertiary/10 rotate-[30deg]"></div>
+  </div>
+  <!-- TopAppBar -->
+  <header class="bg-[#0b0e14] dark:bg-[#0b0e14] flex flex-col items-center justify-center w-full py-8 px-6 docked full-width top-0 border-none z-50">
+  <div class="text-4xl font-black text-[#c1fffe] drop-shadow-[0_0_10px_rgba(0,230,230,0.5)] font-['Space_Grotesk'] tracking-tight uppercase" style="">TYPE-TRIS</div>
+  <div class="mt-4 flex items-center space-x-6">
+  <span class="text-[#45484f] uppercase text-[10px] tracking-widest font-['Plus_Jakarta_Sans'] font-bold hover:text-[#00ffff] transition-colors duration-200 cursor-pointer" style="">GAME</span>
+  <span class="text-[#ff51fa] font-bold font-['Plus_Jakarta_Sans'] text-[10px] tracking-widest uppercase magenta-glow" style="">HOW TO PLAY</span>
+  <span class="text-[#45484f] uppercase text-[10px] tracking-widest font-['Plus_Jakarta_Sans'] font-bold hover:text-[#00ffff] transition-colors duration-200 cursor-pointer" style="">LEADERBOARD</span>
+  </div>
+  <div class="absolute top-8 right-8 flex space-x-4">
+  <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer transition-colors" data-icon="help" style="">help</span>
+  <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer transition-colors" data-icon="settings" style="">settings</span>
+  </div>
+  </header>
+  <!-- Main Content -->
+  <main class="flex-grow flex flex-col items-center justify-center px-6 relative z-10 py-12">
+  <div class="max-w-4xl w-full flex flex-col lg:flex-row items-center gap-16">
+  <!-- Illustration Area -->
+  <div class="w-full lg:w-1/2 aspect-square bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-center relative">
+  <!-- Grid Pattern -->
+  <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(#45484f 1px, transparent 1px), linear-gradient(90deg, #45484f 1px, transparent 1px); background-size: 40px 40px;"></div>
+  <!-- Neon Pixel Art Clearing Line -->
+  <div class="relative w-64 h-64 flex flex-col justify-end p-4">
+  <!-- Top Blocks -->
+  <div class="grid grid-cols-4 gap-1 mb-8">
+  <div class="w-10 h-10 bg-secondary/20 border border-secondary"></div>
+  <div class="w-10 h-10 bg-secondary/20 border border-secondary"></div>
+  <div class="w-10 h-10"></div>
+  <div class="w-10 h-10"></div>
+  </div>
+  <!-- The Clearing Line (Horizontal) -->
+  <div class="flex gap-1 animate-pulse">
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  <div class="w-10 h-10 bg-primary shadow-[0_0_15px_#c1fffe]"></div>
+  </div>
+  <!-- Bottom Blocks -->
+  <div class="grid grid-cols-4 gap-1 mt-1">
+  <div class="w-10 h-10 bg-tertiary/20 border border-tertiary"></div>
+  <div class="w-10 h-10 bg-tertiary/20 border border-tertiary"></div>
+  <div class="w-10 h-10 bg-tertiary/20 border border-tertiary"></div>
+  <div class="w-10 h-10"></div>
+  </div>
+  <!-- FX -->
+  <div class="absolute left-0 right-0 h-1 bg-primary/50 blur-sm glow-line top-[172px]"></div>
+  </div>
+  <!-- Caption -->
+  <div class="absolute bottom-4 left-4 bg-surface-bright/80 px-3 py-1 border-l-2 border-primary">
+  <span class="font-label text-[10px] text-primary uppercase tracking-tighter" style="">SIMULATION_03: LINE_CLEAR</span>
+  </div>
+  </div>
+  <!-- Text Content Area -->
+  <div class="w-full lg:w-1/2 space-y-8 text-center lg:text-left">
+  <div class="space-y-2">
+  <p class="font-label text-primary-dim uppercase tracking-[0.2rem] text-sm font-bold" style="">Welcome to TypeTris!</p>
+  <h1 class="font-headline text-5xl md:text-7xl font-black uppercase text-on-surface leading-none" style="">Clearing Lines</h1>
+  </div>
+  <p class="font-body text-xl text-on-surface-variant leading-relaxed max-w-lg" style="">
+                      Fill complete horizontal rows to clear them and increase your score. <span class="text-secondary font-bold" style="">More lines at once = bigger bonus.</span> Mastering the "Tetris" (4 lines at once) is key to dominating the rankings.
+                  </p>
+  <div class="flex flex-col space-y-4 pt-4">
+  <div class="flex items-center space-x-4 justify-center lg:justify-start">
+  <div class="w-12 h-[2px] bg-outline-variant"></div>
+  <span class="font-label text-[10px] text-outline uppercase tracking-widest font-bold" style="">Step 03 of 0</span>
+  <div class="w-12 h-[2px] bg-outline-variant"></div>
+  </div>
+  </div>
+  </div>
+  </div>
+  </main>
+  <!-- BottomNavBar -->
+  <nav class="fixed bottom-0 left-0 w-full z-50 pb-10 bg-transparent">
+  <div class="mx-auto max-w-4xl px-4 flex items-center justify-center gap-8">
+  <button onclick="window.location.href='/instructions/instructions2.html'" class="group flex items-center space-x-3 text-[#45484f] p-4 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase transition-all duration-200 hover:text-[#c1fffe] hover:drop-shadow-[0_0_8px_rgba(193,255,254,0.8)]">
+  <span class="material-symbols-outlined text-lg">arrow_back_ios</span>
+  <span>PREVIOUS</span>
+  </button>
+  <div class="flex space-x-2">
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-12 h-1 bg-secondary shadow-[0_0_8px_rgba(255,81,250,1)]"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  <div class="w-8 h-1 bg-outline-variant"></div>
+  </div>
+  <button onclick="window.location.href='/instructions/instructions4.html'" class="group flex items-center space-x-3 bg-gradient-to-br from-[#c1fffe] to-[#00ffff] text-[#0b0e14] p-4 scale-110 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase shadow-[0_0_20px_rgba(0,255,255,0.4)] active:scale-95 duration-100">
+  <span>NEXT</span>
+  <span class="material-symbols-outlined text-lg">arrow_forward_ios</span>
+  </button>
+  </div>
+  </nav>
+  <!-- Decorative Corner UI -->
+  <div class="fixed top-0 left-0 p-8 hidden md:block">
+  <div class="w-12 h-12 border-t-2 border-l-2 border-outline-variant/30"></div>
+  </div>
+  <div class="fixed top-0 right-0 p-8 hidden md:block">
+  <div class="w-12 h-12 border-t-2 border-r-2 border-outline-variant/30"></div>
+  </div>
+  <div class="fixed bottom-0 left-0 p-8 hidden md:block">
+  <div class="w-12 h-12 border-b-2 border-l-2 border-outline-variant/30"></div>
+  </div>
+  <div class="fixed bottom-0 right-0 p-8 hidden md:block">
+  <div class="w-12 h-12 border-b-2 border-r-2 border-outline-variant/30"></div>
+  </div>
+  </body></html>

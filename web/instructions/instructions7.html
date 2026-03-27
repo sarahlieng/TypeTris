@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Manrope:wght@300;400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-surface": "#ecedf6",
+              "tertiary-container": "#2ff801",
+              "on-background": "#ecedf6",
+              "surface-variant": "#22262f",
+              "tertiary-dim": "#2be800",
+              "on-tertiary": "#0d6100",
+              "on-secondary-fixed-variant": "#920091",
+              "surface-container-highest": "#22262f",
+              "on-secondary": "#400040",
+              "primary-dim": "#00e6e6",
+              "outline": "#73757d",
+              "on-error-container": "#ffb2b9",
+              "tertiary-fixed-dim": "#2be800",
+              "outline-variant": "#45484f",
+              "on-primary-fixed": "#004343",
+              "secondary-dim": "#ff51fa",
+              "secondary": "#ff51fa",
+              "primary-container": "#00ffff",
+              "surface-dim": "#0b0e14",
+              "on-tertiary-fixed": "#064200",
+              "on-error": "#490013",
+              "inverse-on-surface": "#52555c",
+              "inverse-surface": "#f9f9ff",
+              "on-secondary-container": "#fff5f9",
+              "on-tertiary-fixed-variant": "#0d6200",
+              "primary": "#c1fffe",
+              "secondary-container": "#a900a9",
+              "on-primary-container": "#005d5d",
+              "primary-fixed": "#00f5f5",
+              "surface": "#0b0e14",
+              "primary-fixed-dim": "#00e6e6",
+              "inverse-primary": "#006a6a",
+              "on-secondary-fixed": "#620061",
+              "surface-container-low": "#10131a",
+              "error-dim": "#d73357",
+              "secondary-fixed": "#ffbdf3",
+              "on-primary-fixed-variant": "#006262",
+              "secondary-fixed-dim": "#ffa6f3",
+              "on-tertiary-container": "#0b5800",
+              "on-surface-variant": "#a9abb3",
+              "tertiary": "#8eff71",
+              "error-container": "#a70138",
+              "error": "#ff6e84",
+              "surface-container-high": "#1c2028",
+              "surface-tint": "#c1fffe",
+              "surface-container-lowest": "#000000",
+              "background": "#0b0e14",
+              "surface-bright": "#282c36",
+              "on-primary": "#006767",
+              "surface-container": "#161a21",
+              "tertiary-fixed": "#2ff801"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glow-cyan { text-shadow: 0 0 10px rgba(193, 255, 254, 0.5); }
+        .glow-magenta { text-shadow: 0 0 10px rgba(255, 81, 250, 0.5); }
+        .block-grid { background-image: radial-gradient(circle, #22262f 1px, transparent 1px); background-size: 30px 30px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary-container overflow-hidden min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-[#0b0e14] dark:bg-[#0b0e14] docked full-width top-0 border-none flex flex-col items-center justify-center w-full py-8 px-6 z-50">
+<div class="flex flex-col items-center space-y-2">
+<h1 class="font-['Space_Grotesk'] tracking-tight uppercase text-4xl font-black text-[#c1fffe] drop-shadow-[0_0_10px_rgba(0,230,230,0.5)]">TYPE-TRIS</h1>
+<div class="flex items-center space-x-6">
+<span class="text-[#ff51fa] font-bold font-['Space_Grotesk'] tracking-tight uppercase">HOW TO PLAY</span>
+<div class="flex space-x-4">
+<button class="text-[#45484f] uppercase text-[10px] tracking-widest hover:text-[#00ffff] transition-colors duration-200 active:scale-95 duration-100">
+<span class="material-symbols-outlined text-base">help</span>
+</button>
+<button class="text-[#45484f] uppercase text-[10px] tracking-widest hover:text-[#00ffff] transition-colors duration-200 active:scale-95 duration-100">
+<span class="material-symbols-outlined text-base">settings</span>
+</button>
+<button class="text-[#45484f] uppercase text-[10px] tracking-widest hover:text-[#00ffff] transition-colors duration-200 active:scale-95 duration-100">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow relative overflow-hidden flex items-center justify-center p-4">
+<!-- Background Elements -->
+<div class="absolute inset-0 bg-surface-container-lowest -z-20"></div>
+<div class="absolute inset-0 block-grid opacity-20 -z-10"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-secondary-container/10 blur-[120px] rounded-full -z-10"></div>
+<div class="absolute top-1/3 left-1/4 w-[600px] h-[600px] bg-primary-container/10 blur-[120px] rounded-full -z-10"></div>
+<!-- Floating Tetrominoes Decor -->
+<div class="absolute top-20 right-[15%] w-16 h-16 border-2 border-primary/20 rotate-12 opacity-30"></div>
+<div class="absolute bottom-40 left-[10%] w-24 h-8 bg-secondary/10 -rotate-45 opacity-20"></div>
+<!-- Tutorial Container -->
+<div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center z-10">
+<!-- Left: Text Content -->
+<div class="space-y-8">
+<div>
+<p class="font-label text-primary uppercase tracking-[0.2rem] text-sm mb-2">Welcome to TypeTris!</p>
+<h2 class="font-headline text-5xl md:text-7xl font-bold text-on-surface leading-none">
+                        Power-Up <br/>
+<span class="text-secondary glow-magenta">Blocks</span>
+</h2>
+</div>
+<p class="text-on-surface-variant text-lg md:text-xl font-light leading-relaxed max-w-md">
+                    Special glowing blocks trigger power-ups: <span class="text-primary font-bold">Time Freeze</span>, <span class="text-tertiary font-bold">Easy Words</span>, and <span class="text-error font-bold">Block Buster</span>. Clear them quickly to gain the advantage!
+                </p>
+<div class="flex flex-col space-y-4">
+<div class="flex items-center space-x-4 group">
+<div class="w-12 h-12 flex items-center justify-center border border-primary/30 group-hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="ac_unit" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+</div>
+<div>
+<span class="font-label text-[10px] text-primary-dim tracking-widest uppercase block">Active Modifier</span>
+<span class="font-headline text-lg font-medium">Time Freeze</span>
+</div>
+</div>
+<div class="flex items-center space-x-4 group">
+<div class="w-12 h-12 flex items-center justify-center border border-tertiary/30 group-hover:border-tertiary transition-colors">
+<span class="material-symbols-outlined text-tertiary" data-icon="abc" style="font-variation-settings: 'FILL' 1;">abc</span>
+</div>
+<div>
+<span class="font-label text-[10px] text-tertiary-dim tracking-widest uppercase block">Active Modifier</span>
+<span class="font-headline text-lg font-medium text-tertiary">Easy Words</span>
+</div>
+</div>
+<div class="flex items-center space-x-4 group">
+<div class="w-12 h-12 flex items-center justify-center border border-error/30 group-hover:border-error transition-colors">
+<span class="material-symbols-outlined text-error" data-icon="handyman" style="font-variation-settings: 'FILL' 1;">handyman</span>
+</div>
+<div>
+<span class="font-label text-[10px] text-error-dim tracking-widest uppercase block">Active Modifier</span>
+<span class="font-headline text-lg font-medium">Block Buster</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Illustration (Bento Style Layout) -->
+<div class="relative aspect-square md:aspect-auto md:h-[500px] grid grid-cols-6 grid-rows-6 gap-2">
+<!-- Main Illustration Frame -->
+<div class="col-span-6 row-span-4 bg-surface-container border border-outline-variant/30 flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
+<!-- Pixel Art Style Power Up Display -->
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-48 h-48 border-[6px] border-primary-container p-4 flex items-center justify-center shadow-[0_0_30px_rgba(0,255,255,0.3)] bg-surface">
+<span class="material-symbols-outlined text-8xl text-primary-container" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+</div>
+<div class="mt-4 flex space-x-2">
+<div class="w-3 h-3 bg-primary"></div>
+<div class="w-3 h-3 bg-primary/40"></div>
+<div class="w-3 h-3 bg-primary/20"></div>
+</div>
+</div>
+</div>
+<!-- Secondary Illustration Frame -->
+<div class="col-span-3 row-span-2 bg-surface-container-high border border-outline-variant/30 flex items-center justify-center">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-4xl text-error" style="font-variation-settings: 'FILL' 1;">handyman</span>
+<span class="font-label text-[8px] text-outline mt-2 tracking-tighter">BUSTER_PRO</span>
+</div>
+</div>
+<!-- Detail Grid Frame -->
+<div class="col-span-3 row-span-2 bg-surface-container-lowest border border-outline-variant/30 p-4 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div class="w-2 h-2 bg-tertiary"></div>
+<span class="font-label text-[8px] text-outline tracking-tighter">DATA_EXTRACT_06</span>
+</div>
+<div class="space-y-1">
+<div class="h-1 w-full bg-outline-variant/20"></div>
+<div class="h-1 w-3/4 bg-outline-variant/20"></div>
+<div class="h-1 w-1/2 bg-outline-variant/20"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 pb-10 bg-transparent">
+<div class="mx-auto max-w-4xl px-4 flex items-center justify-center gap-8">
+<button onclick="window.location.href='/instructions/instructions6.html'" class="group flex items-center space-x-3 text-[#45484f] p-4 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase transition-all duration-200 hover:text-[#c1fffe] hover:drop-shadow-[0_0_8px_rgba(193,255,254,0.8)]">
+<span class="material-symbols-outlined text-lg">arrow_back_ios</span>
+<span>PREVIOUS</span>
+</button>
+<div class="flex space-x-2">
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-12 h-1 bg-secondary shadow-[0_0_8px_rgba(255,81,250,1)]"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+</div>
+<button onclick="window.location.href='/instructions/instructions8.html'" class="group flex items-center space-x-3 bg-gradient-to-br from-[#c1fffe] to-[#00ffff] text-[#0b0e14] p-4 scale-110 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase shadow-[0_0_20px_rgba(0,255,255,0.4)] active:scale-95 duration-100">
+<span>NEXT</span>
+<span class="material-symbols-outlined text-lg">arrow_forward_ios</span>
+</button>
+</div>
+</nav>
+</body></html>

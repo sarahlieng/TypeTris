@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TYPE-TRIS - Tutorial: Placing Blocks</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&amp;family=Manrope:wght@200;300;400;500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-surface": "#ecedf6",
+              "tertiary-container": "#2ff801",
+              "on-background": "#ecedf6",
+              "surface-variant": "#22262f",
+              "tertiary-dim": "#2be800",
+              "on-tertiary": "#0d6100",
+              "on-secondary-fixed-variant": "#920091",
+              "surface-container-highest": "#22262f",
+              "on-secondary": "#400040",
+              "primary-dim": "#00e6e6",
+              "outline": "#73757d",
+              "on-error-container": "#ffb2b9",
+              "tertiary-fixed-dim": "#2be800",
+              "outline-variant": "#45484f",
+              "on-primary-fixed": "#004343",
+              "secondary-dim": "#ff51fa",
+              "secondary": "#ff51fa",
+              "primary-container": "#00ffff",
+              "surface-dim": "#0b0e14",
+              "on-tertiary-fixed": "#064200",
+              "on-error": "#490013",
+              "inverse-on-surface": "#52555c",
+              "inverse-surface": "#f9f9ff",
+              "on-secondary-container": "#fff5f9",
+              "on-tertiary-fixed-variant": "#0d6200",
+              "primary": "#c1fffe",
+              "secondary-container": "#a900a9",
+              "on-primary-container": "#005d5d",
+              "primary-fixed": "#00f5f5",
+              "surface": "#0b0e14",
+              "primary-fixed-dim": "#00e6e6",
+              "inverse-primary": "#006a6a",
+              "on-secondary-fixed": "#620061",
+              "surface-container-low": "#10131a",
+              "error-dim": "#d73357",
+              "secondary-fixed": "#ffbdf3",
+              "on-primary-fixed-variant": "#006262",
+              "secondary-fixed-dim": "#ffa6f3",
+              "on-tertiary-container": "#0b5800",
+              "on-surface-variant": "#a9abb3",
+              "tertiary": "#8eff71",
+              "error-container": "#a70138",
+              "error": "#ff6e84",
+              "surface-container-high": "#1c2028",
+              "surface-tint": "#c1fffe",
+              "surface-container-lowest": "#000000",
+              "background": "#0b0e14",
+              "surface-bright": "#282c36",
+              "on-primary": "#006767",
+              "surface-container": "#161a21",
+              "tertiary-fixed": "#2ff801"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Manrope"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .neon-glow-primary {
+            text-shadow: 0 0 10px rgba(193, 255, 254, 0.5);
+        }
+        .neon-glow-secondary {
+            text-shadow: 0 0 15px rgba(255, 81, 250, 0.6);
+        }
+        .bg-radial-glow {
+            background: radial-gradient(circle at 50% 50%, #1a1025 0%, #0b0e14 70%);
+        }
+        .block-mask {
+            mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Background Decoration: Floating Tetrominoes -->
+<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-radial-glow">
+<div class="absolute top-20 left-10 w-24 h-24 border-4 border-secondary/20 rotate-12 blur-[1px]"></div>
+<div class="absolute bottom-40 right-20 w-32 h-16 border-4 border-primary/10 -rotate-45 blur-[2px]"></div>
+<div class="absolute top-1/2 left-1/4 w-16 h-32 border-4 border-tertiary/10 rotate-90 blur-[1px]"></div>
+<div class="absolute top-1/3 right-1/4 w-20 h-20 border-4 border-secondary-container/20 -rotate-12 blur-[3px]"></div>
+</div>
+<!-- TopAppBar Component -->
+<header class="fixed top-0 left-0 w-full z-50 flex flex-col items-center justify-center py-8 px-6 bg-[#0b0e14]">
+<div class="flex items-center justify-between w-full max-w-7xl">
+<div class="flex-1 hidden md:flex items-center space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">help</span>
+</div>
+<div class="flex flex-col items-center">
+<h1 class="text-4xl font-black text-[#c1fffe] drop-shadow-[0_0_10px_rgba(0,230,230,0.5)] font-headline tracking-tight uppercase">TYPE-TRIS</h1>
+<span class="text-[#ff51fa] font-bold font-headline tracking-widest text-sm mt-1 uppercase">HOW TO PLAY</span>
+</div>
+<div class="flex-1 hidden md:flex items-center justify-end space-x-6">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-error transition-colors">close</span>
+</div>
+</div>
+</header>
+<main class="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-24 pb-32">
+<div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+<!-- Content Section -->
+<div class="flex flex-col space-y-8 order-2 md:order-1">
+<div class="space-y-2">
+<p class="font-label text-xs tracking-[0.2em] text-on-surface-variant uppercase">Welcome to TypeTris!</p>
+<h2 class="text-6xl font-black font-headline text-on-surface uppercase leading-none tracking-tighter">
+                        Placing <span class="text-primary-container neon-glow-primary">Blocks</span>
+</h2>
+</div>
+<p class="text-lg text-on-surface-variant leading-relaxed max-w-md">
+                    Type the word correctly to unlock block controls. <span class="text-primary">Rotate</span> with arrow keys and move it left or right to position it on the board.
+                </p>
+<!-- Instruction Details - High-end UI Pattern -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container p-6 border-l-2 border-secondary">
+<span class="font-label text-[10px] text-on-surface-variant block mb-2 uppercase tracking-widest">Action 01</span>
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-secondary">keyboard</span>
+<span class="font-headline font-bold text-on-surface">TYPE WORD</span>
+</div>
+</div>
+<div class="bg-surface-container p-6 border-l-2 border-primary">
+<span class="font-label text-[10px] text-on-surface-variant block mb-2 uppercase tracking-widest">Action 02</span>
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary">open_with</span>
+<span class="font-headline font-bold text-on-surface">POSITION</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Illustration Section -->
+<div class="relative order-1 md:order-2 flex justify-center items-center h-[400px]">
+<!-- Kinetic Arcade Illustration -->
+<div class="relative z-10 w-64 h-64 border-2 border-outline-variant flex items-center justify-center bg-surface-container-lowest shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+<!-- Central Tetromino -->
+<div class="grid grid-cols-2 gap-1 p-1">
+<div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-container shadow-[0_0_15px_rgba(0,255,255,0.4)]"></div>
+<div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-container shadow-[0_0_15px_rgba(0,255,255,0.4)]"></div>
+<div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-container shadow-[0_0_15px_rgba(0,255,255,0.4)] opacity-0"></div>
+<div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-container shadow-[0_0_15px_rgba(0,255,255,0.4)]"></div>
+</div>
+<!-- Floating UI Controls -->
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
+<span class="material-symbols-outlined text-secondary text-4xl animate-pulse">sync</span>
+<span class="font-label text-[10px] text-secondary mt-1 font-bold">ROTATE</span>
+</div>
+<div class="absolute top-1/2 -left-16 -translate-y-1/2 flex items-center">
+<span class="material-symbols-outlined text-primary text-4xl">arrow_back</span>
+<span class="font-label text-[10px] text-primary ml-2 font-bold vertical-text">LEFT</span>
+</div>
+<div class="absolute top-1/2 -right-16 -translate-y-1/2 flex items-center">
+<span class="font-label text-[10px] text-primary mr-2 font-bold vertical-text">RIGHT</span>
+<span class="material-symbols-outlined text-primary text-4xl">arrow_forward</span>
+</div>
+</div>
+<!-- Background visual weight -->
+<div class="absolute inset-0 bg-surface-container opacity-50 blur-3xl rounded-full scale-75"></div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Component -->
+<nav class="fixed bottom-0 left-0 w-full z-50 pb-10 bg-transparent">
+<div class="mx-auto max-w-4xl px-4 flex items-center justify-center gap-8">
+<button onclick="window.location.href='/instructions/instructions3.html'" class="group flex items-center space-x-3 text-[#45484f] p-4 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase transition-all duration-200 hover:text-[#c1fffe] hover:drop-shadow-[0_0_8px_rgba(193,255,254,0.8)]">
+<span class="material-symbols-outlined text-lg">arrow_back_ios</span>
+<span>PREVIOUS</span>
+</button>
+<div class="flex space-x-2">
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-12 h-1 bg-secondary shadow-[0_0_8px_rgba(255,81,250,1)]"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+<div class="w-8 h-1 bg-outline-variant"></div>
+</div>
+<button onclick="window.location.href='/instructions/instructions5.html'" class="group flex items-center space-x-3 bg-gradient-to-br from-[#c1fffe] to-[#00ffff] text-[#0b0e14] p-4 scale-110 font-['Plus_Jakarta_Sans'] text-[10px] font-bold tracking-[0.05rem] uppercase shadow-[0_0_20px_rgba(0,255,255,0.4)] active:scale-95 duration-100">
+<span>NEXT</span>
+<span class="material-symbols-outlined text-lg">arrow_forward_ios</span>
+</button>
+</div>
+</nav>
+<!-- Visual Polish: Decorative Grid Overlay -->
+<div class="fixed inset-0 pointer-events-none z-0 opacity-5" data-alt="subtle tech grid pattern overlay for futuristic arcade interface depth" style="background-image: radial-gradient(#c1fffe 0.5px, transparent 0.5px); background-size: 40px 40px;"></div>
+</body></html>
