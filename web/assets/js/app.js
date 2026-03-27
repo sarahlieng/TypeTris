@@ -138,10 +138,229 @@
     });
   }
 
+  function wireParentalLogin() {
+    var form = document.getElementById("parental-login-form");
+    if (!form) {
+      return;
+    }
+    var pinInput = document.getElementById("parental-pin");
+    var msg = document.getElementById("parental-message");
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var pin = pinInput ? pinInput.value.trim() : "";
+      if (!pin) {
+        showMessage(msg, "Admin PIN is required.", true);
+        return;
+      }
+
+      var result = await postJson("/api/parent/sessions", { pin: pin });
+      if (!result.ok) {
+        showMessage(msg, result.payload.error || "Failed to unlock parental controls.", true);
+        return;
+      }
+
+      sessionStorage.setItem("typetrisAdminPin", pin);
+      window.location.href = "parent-dashboard.html";
+    });
+  }
+
+  function wireParentDashboard() {
+    var dashboard = document.getElementById("parent-dashboard");
+    if (!dashboard) {
+      return;
+    }
+    var pin = sessionStorage.getItem("typetrisAdminPin");
+    if (!pin) {
+      window.location.href = "parental.html";
+      return;
+    }
+
+    var msg = document.getElementById("parent-dashboard-message");
+    var tbody = document.getElementById("parent-dashboard-sessions-body");
+    var list = document.getElementById("parent-dashboard-sessions-list");
+    var logout = document.getElementById("parent-logout");
+    var createButton = document.getElementById("parent-create-account");
+
+    function renderAccountRows(accounts) {
+      if (!list) {
+        return;
+      }
+      list.innerHTML = "";
+      if (!Array.isArray(accounts) || accounts.length === 0) {
+        var emptyCard = document.createElement("div");
+        emptyCard.className = "p-5 bg-surface-container-low text-on-surface-variant";
+        emptyCard.textContent = "No student accounts yet.";
+        list.appendChild(emptyCard);
+        return;
+      }
+      accounts.forEach(function (account, index) {
+        var row = document.createElement("div");
+        row.className = "flex flex-col md:flex-row md:items-center justify-between p-5 bg-surface-container-low hover:bg-surface-container transition-colors" +
+          (index < accounts.length - 1 ? " border-b border-outline-variant/10" : "");
+        row.innerHTML =
+          "<span class='text-lg font-headline font-medium text-on-surface mb-4 md:mb-0'>" + account.username + "</span>" +
+          "<div class='flex flex-wrap gap-3'>" +
+          "<button type='button' data-action='view-stats' data-username='" + account.username + "' class='px-4 py-2 text-[10px] font-label font-bold tracking-widest uppercase border border-outline hover:border-primary hover:text-primary transition-all'>VIEW STATS</button>" +
+          "<button type='button' data-action='reset-password' data-username='" + account.username + "' class='px-4 py-2 text-[10px] font-label font-bold tracking-widest uppercase border border-outline hover:border-primary hover:text-primary transition-all'>RESET PASSWORD</button>" +
+          "<button type='button' data-action='delete-account' data-username='" + account.username + "' class='px-4 py-2 text-[10px] font-label font-bold tracking-widest uppercase border border-secondary/40 text-secondary hover:bg-secondary/10 transition-all'>DELETE</button>" +
+          "</div>";
+        list.appendChild(row);
+      });
+    }
+
+    function loadAccounts() {
+      return postJson("/api/parent/accounts/list", { pin: pin }).then(function (result) {
+        if (!result.ok) {
+          throw new Error(result.payload.error || "Failed to load accounts.");
+        }
+        var accounts = Array.isArray(result.payload.accounts) ? result.payload.accounts : [];
+        renderAccountRows(accounts);
+        return accounts;
+      });
+    }
+
+    if (logout) {
+      logout.addEventListener("click", function () {
+        sessionStorage.removeItem("typetrisAdminPin");
+        window.location.href = "parental.html";
+      });
+    }
+
+    if (list) {
+      list.addEventListener("click", function (event) {
+        var button = event.target.closest("button[data-action]");
+        if (!button) {
+          return;
+        }
+        var action = button.getAttribute("data-action");
+        var username = button.getAttribute("data-username");
+        if (!username) {
+          return;
+        }
+        if (action === "view-stats") {
+          postJson("/api/parent/accounts/list", { pin: pin }).then(function (result) {
+            if (!result.ok) {
+              showMessage(msg, result.payload.error || "Failed to load stats.", true);
+              return;
+            }
+            var accounts = Array.isArray(result.payload.accounts) ? result.payload.accounts : [];
+            var match = accounts.find(function (a) { return a.username === username; });
+            if (!match) {
+              showMessage(msg, "Account not found.", true);
+              return;
+            }
+            alert(
+              "Stats for " + username + "\n" +
+              "Sessions: " + match.sessionCount + "\n" +
+              "Last Session: " + (match.lastSessionAt || "Never") + "\n" +
+              "Created: " + match.createdAt
+            );
+          });
+          return;
+        }
+        if (action === "reset-password") {
+          var newPassword = prompt("Enter new password for " + username + " (min 8 chars):");
+          if (!newPassword) {
+            return;
+          }
+          postJson("/api/parent/accounts/reset-password", {
+            pin: pin,
+            username: username,
+            newPassword: newPassword
+          }).then(function (result) {
+            if (!result.ok) {
+              showMessage(msg, result.payload.error || "Failed to reset password.", true);
+              return;
+            }
+            showMessage(msg, "Password reset for " + username + ".", false);
+          });
+          return;
+        }
+        if (action === "delete-account") {
+          if (!confirm("Delete account '" + username + "'?")) {
+            return;
+          }
+          postJson("/api/parent/accounts/delete", {
+            pin: pin,
+            username: username
+          }).then(function (result) {
+            if (!result.ok) {
+              showMessage(msg, result.payload.error || "Failed to delete account.", true);
+              return;
+            }
+            showMessage(msg, "Deleted account " + username + ".", false);
+            loadAccounts().catch(function (err) {
+              showMessage(msg, err.message || "Failed to refresh accounts.", true);
+            });
+          });
+        }
+      });
+    }
+
+    if (createButton) {
+      createButton.addEventListener("click", function () {
+        var username = prompt("New student username:");
+        if (!username) {
+          return;
+        }
+        var email = prompt("Student email:");
+        if (!email) {
+          return;
+        }
+        var password = prompt("Temporary password (min 8 chars):");
+        if (!password) {
+          return;
+        }
+        postJson("/api/parent/accounts/create", {
+          pin: pin,
+          username: username.trim(),
+          email: email.trim(),
+          password: password
+        }).then(function (result) {
+          if (!result.ok) {
+            showMessage(msg, result.payload.error || "Failed to create account.", true);
+            return;
+          }
+          showMessage(msg, "Created account " + username + ".", false);
+          loadAccounts().catch(function (err) {
+            showMessage(msg, err.message || "Failed to refresh accounts.", true);
+          });
+        });
+      });
+    }
+
+    postJson("/api/parent/sessions", { pin: pin }).then(function (result) {
+      if (!result.ok) {
+        showMessage(msg, result.payload.error || "Session expired. Please enter PIN again.", true);
+        sessionStorage.removeItem("typetrisAdminPin");
+        setTimeout(function () {
+          window.location.href = "parental.html";
+        }, 900);
+        return;
+      }
+      showMessage(msg, "Unlocked. Account management ready.", false);
+      if (!tbody && !list) {
+        return;
+      }
+      if (tbody) {
+        tbody.innerHTML = "";
+      }
+      if (list) {
+        list.innerHTML = "";
+      }
+      loadAccounts().catch(function (err) {
+        showMessage(msg, err.message || "Failed to load accounts.", true);
+      });
+    });
+  }
+
   function init() {
     wireExitButtons();
     wireRegisterForm();
     wireLoginForm();
+    wireParentalLogin();
+    wireParentDashboard();
   }
 
   if (document.readyState === "loading") {
