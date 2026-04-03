@@ -12,6 +12,8 @@ import java.util.List;
 
 /**
  * SQLite-backed repository for account creation and authentication.
+ * 
+ * @author CS2212 Group 26, Western University
  */
 public final class AuthRepository {
 
@@ -212,11 +214,6 @@ public final class AuthRepository {
         return out;
     }
 
-    /**
-     * Loads the player profile stats used by the UI.
-     *
-     * @return null if the user does not exist.
-     */
     /**
      * Updates rolling stats after a finished run. {@code accuracyPercent} is 0–100.
      * High score and best WPM are replaced only when the new values are higher.

@@ -9,6 +9,8 @@ import javax.crypto.spec.PBEKeySpec;
 
 /**
  * Password hashing helpers (PBKDF2 + random salt).
+ * 
+ * @author CS2212 Group 26, Western University
  */
 public final class PasswordUtil {
 
