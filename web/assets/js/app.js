@@ -186,7 +186,7 @@
           "typetrisDifficulty",
           JSON.stringify({ tier: tier, level: Number(level) })
         );
-        window.location.href = "instructions/instructions.html";
+        window.location.href = "gameplay.html";
       });
     });
   }
