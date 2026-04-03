@@ -8,6 +8,8 @@ import java.util.List;
  *
  * <p>This is currently backed by the `users` table and returns a list of
  * lightweight `PlayerAccount` views suitable for displaying a leaderboard.
+ * 
+ * @author CS2212 Group 26, Western University
  */
 public final class Leaderboard {
 
