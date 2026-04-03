@@ -112,25 +112,13 @@
 
     <!-- Center Column: Main Game Board -->
     <section class="col-span-6 flex flex-col items-center flex-1 min-h-0">
-      <div class="relative w-full max-w-[480px] flex-1 min-h-0 bg-surface-container-lowest border-[1px] border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.05)] overflow-hidden grid-pattern">
-        <div class="absolute top-1/4 left-[40%] flex flex-col items-start translate-x-[-50%] group">
-          <div class="flex">
-            <div class="w-10 h-10 bg-primary-container border border-surface shadow-[0_0_15px_rgba(0,255,255,0.6)] flex items-center justify-center font-headline font-black text-on-primary-container">r</div>
-          </div>
-          <div class="flex">
-            <div class="w-10 h-10 bg-primary-container border border-surface shadow-[0_0_15px_rgba(0,255,255,0.6)] flex items-center justify-center font-headline font-black text-on-primary-container">h</div>
-            <div class="w-10 h-10 bg-primary-container border border-surface shadow-[0_0_15px_rgba(0,255,255,0.6)] flex items-center justify-center font-headline font-black text-on-primary-container">i</div>
-            <div class="w-10 h-10 bg-primary-container border border-surface shadow-[0_0_15px_rgba(0,255,255,0.6)] flex items-center justify-center font-headline font-black text-on-primary-container">n</div>
-            <div class="w-10 h-10 bg-primary-container border border-surface shadow-[0_0_15px_rgba(0,255,255,0.6)] flex items-center justify-center font-headline font-black text-on-primary-container">o</div>
-          </div>
-          <div class="mt-2 w-full text-center font-headline uppercase tracking-[0.2em] text-xs font-bold text-primary glow-cyan">RHINO</div>
+      <div id="game-board" class="relative w-full max-w-[480px] flex-1 min-h-0 bg-surface-container-lowest border-[1px] border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.05)] overflow-hidden grid-pattern">
+        <div id="falling-word-root" class="absolute left-1/2 flex flex-col items-center gap-2 pointer-events-none will-change-transform" style="top: 0; transform: translateX(-50%);">
+          <div id="falling-word-letters" class="flex flex-row flex-wrap justify-center gap-0.5 max-w-[min(100%,360px)]"></div>
+          <p id="falling-word-hint" class="font-headline uppercase tracking-[0.2em] text-[10px] font-bold text-primary glow-cyan text-center opacity-90"></p>
         </div>
-
-        <div class="absolute bottom-0 w-full flex justify-center gap-1 opacity-20 px-10">
-          <div class="w-10 h-10 border border-outline-variant"></div>
-          <div class="w-10 h-10 border border-outline-variant"></div>
-          <div class="w-10 h-10 border border-outline-variant"></div>
-        </div>
+        <div id="game-deadline" class="absolute left-2 right-2 h-0.5 bg-error/60 shadow-[0_0_8px_rgba(255,80,80,0.5)] pointer-events-none" style="bottom: 12px"></div>
+        <p class="absolute bottom-1 left-0 right-0 text-center font-label text-[8px] font-bold uppercase tracking-widest text-error/60 pointer-events-none">Miss the word past this line and you lose a life</p>
       </div>
 
       <div class="w-full max-w-[480px] mt-8 mb-2 relative shrink-0 flex-none">
@@ -165,7 +153,7 @@
           </div>
           <div class="pt-2">
             <div class="h-2 w-full bg-surface-container-highest/50 relative overflow-hidden">
-              <div class="absolute inset-y-0 left-0 w-[15%] bg-primary shadow-[0_0_10px_rgba(0,255,255,0.8)]"></div>
+              <div id="hud-level-progress-fill" class="absolute inset-y-0 left-0 w-[0%] bg-primary shadow-[0_0_10px_rgba(0,255,255,0.8)] transition-[width] duration-300"></div>
             </div>
             <p class="mt-2 font-label text-[9px] font-bold text-on-surface-variant/60 uppercase tracking-widest">NEXT LEVEL</p>
           </div>
