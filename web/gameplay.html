@@ -13,6 +13,8 @@
   <style>
     .glow-cyan { text-shadow: 0 0 10px rgba(0, 255, 255, 0.8); }
     .glow-cyan-box { box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
+    .glow-primary { box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); }
+    .glow-icon { text-shadow: 0 0 20px rgba(0, 255, 255, 0.6); }
     .glass-panel { backdrop-filter: blur(20px); background: rgba(22, 26, 33, 0.6); }
     .grid-pattern {
       background-image:
@@ -32,7 +34,6 @@
     <div class="absolute bottom-40 left-10 w-24 h-12 border-4 border-secondary/20 -rotate-45 opacity-20"></div>
   </div>
 
-  <!-- Top Navigation -->
   <header class="fixed top-2 w-full z-50 flex justify-between items-center px-6 h-20 bg-gradient-to-b from-[#161a21] to-transparent shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
     <div class="flex items-center gap-4"></div>
     <div class="absolute left-1/2 -translate-x-1/2 text-3xl font-black tracking-tighter text-[#c1fffe] drop-shadow-[0_0_10px_rgba(193,255,254,0.8)] font-headline uppercase tracking-widest">
@@ -41,9 +42,7 @@
     <div class="flex items-center gap-6"></div>
   </header>
 
-  <!-- Main Game Canvas -->
   <main class="flex-1 w-full mt-20 px-8 pt-10 pb-8 grid grid-cols-12 gap-8 z-10 relative h-[calc(100vh-5rem)] overflow-hidden">
-    <!-- Left Column: Info & Powerups -->
     <section class="col-span-3 flex flex-col gap-6 min-h-0 overflow-hidden">
       <div class="bg-surface-container-high p-6 shadow-[0_0_20px_rgba(0,0,0,0.4)] border-l-2 border-primary/20">
         <h3 class="font-label text-[10px] font-extrabold uppercase tracking-[0.2rem] text-on-surface-variant mb-6">GAME INFO</h3>
@@ -58,67 +57,42 @@
           </div>
           <div>
             <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">WORDS PER MINUTE</p>
-            <div class="flex items-baseline gap-2">
-              <p id="hud-wpm" class="font-headline text-4xl font-bold text-secondary">0</p>
-              <span class="text-xs font-label text-on-surface-variant">WPM</span>
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <p id="hud-wpm" class="font-headline text-4xl font-bold text-secondary tabular-nums">0</p>
             </div>
+            <p id="hud-wpm-overall" class="text-[11px] font-label text-on-surface-variant/75 mt-1 tabular-nums">Now: 0 WPM</p>
           </div>
           <div>
-            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">LIVES</p>
-            <p id="hud-lives" class="font-headline text-4xl font-bold text-primary-container glow-cyan">3</p>
+            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">CONTROLS</p>
+            <p id="hud-control-phase" class="font-headline text-lg font-bold text-primary-container/90 leading-snug">Type the word</p>
           </div>
         </div>
       </div>
 
       <div class="bg-surface-container p-6 border-l-2 border-secondary/20">
-        <h3 class="font-label text-[10px] font-extrabold uppercase tracking-[0.2rem] text-on-surface-variant mb-6 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
-          POWER-UPS
+        <h3 class="font-label text-[10px] font-extrabold uppercase tracking-[0.2rem] text-on-surface-variant mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">keyboard</span>
+          HOW TO PLAY
         </h3>
-        <div class="space-y-4">
-          <button type="button" class="w-full flex items-center justify-between p-4 bg-surface-bright/50 border border-outline-variant/10 hover:border-tertiary-dim/50 transition-all group">
-            <div class="flex items-center gap-3">
-              <span class="material-symbols-outlined text-tertiary" data-icon="ac_unit">ac_unit</span>
-              <div class="text-left">
-                <p class="text-[10px] font-bold font-label uppercase tracking-tight text-on-surface">Time Freeze</p>
-                <p class="text-[8px] text-on-surface-variant/60">Shift + F</p>
-              </div>
-            </div>
-            <div class="h-1 w-8 bg-surface-container-highest"></div>
-          </button>
-          <button type="button" class="w-full flex items-center justify-between p-4 bg-surface-bright/50 border border-outline-variant/10 hover:border-primary-dim/50 transition-all group">
-            <div class="flex items-center gap-3">
-              <span class="material-symbols-outlined text-primary" data-icon="text_fields">text_fields</span>
-              <div class="text-left">
-                <p class="text-[10px] font-bold font-label uppercase tracking-tight text-on-surface">Easy Words</p>
-                <p class="text-[8px] text-on-surface-variant/60">Shift + E</p>
-              </div>
-            </div>
-            <div class="h-1 w-8 bg-surface-container-highest"></div>
-          </button>
-          <button type="button" class="w-full flex items-center justify-between p-4 bg-surface-bright/50 border border-outline-variant/10 hover:border-error/50 transition-all group">
-            <div class="flex items-center gap-3">
-              <span class="material-symbols-outlined text-error" data-icon="vibration">vibration</span>
-              <div class="text-left">
-                <p class="text-[10px] font-bold font-label uppercase tracking-tight text-on-surface">Block Buster</p>
-                <p class="text-[8px] text-on-surface-variant/60">Shift + B</p>
-              </div>
-            </div>
-            <div class="h-1 w-8 bg-surface-container-highest"></div>
-          </button>
-        </div>
+        <ul class="text-[11px] text-on-surface-variant/90 space-y-2 font-body leading-relaxed list-disc pl-4">
+          <li>Type the word to unlock move / rotate; if it lands first, it locks there and play continues.</li>
+          <li>Then <span class="text-primary">← →</span> move, <span class="text-primary">↑ ↓</span> rotate, <span class="text-primary">Space</span> drop &amp; lock.</li>
+          <li>Fill rows to clear them and score.</li>
+          <li>Game ends if the stack reaches the top.</li>
+        </ul>
       </div>
     </section>
 
-    <!-- Center Column: Main Game Board -->
     <section class="col-span-6 flex flex-col items-center flex-1 min-h-0">
-      <div id="game-board" class="relative w-full max-w-[480px] flex-1 min-h-0 bg-surface-container-lowest border-[1px] border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.05)] overflow-hidden grid-pattern">
-        <div id="falling-word-root" class="absolute left-1/2 flex flex-col items-center gap-2 pointer-events-none will-change-transform" style="top: 0; transform: translateX(-50%);">
-          <div id="falling-word-letters" class="flex flex-row flex-wrap justify-center gap-0.5 max-w-[min(100%,360px)]"></div>
-          <p id="falling-word-hint" class="font-headline uppercase tracking-[0.2em] text-[10px] font-bold text-primary glow-cyan text-center opacity-90"></p>
+      <div id="game-board" class="relative w-full max-w-[480px] flex-1 min-h-0 bg-surface-container-lowest border-[1px] border-primary/30 shadow-[0_0_50px_rgba(0,255,255,0.05)] overflow-hidden grid-pattern flex flex-col items-center justify-center px-3 py-4 gap-3">
+        <div id="playfield-wrap" class="relative border border-primary/25 bg-surface-container-lowest/90 shadow-[inset_0_0_40px_rgba(0,0,0,0.35)]">
+          <div id="game-overline" class="absolute left-0 right-0 top-0 h-0.5 bg-error/70 z-20 pointer-events-none" title="Stack past this line ends the game"></div>
+          <div id="playfield" class="relative z-10">
+            <div id="locked-layer" class="absolute inset-0 z-[1] pointer-events-none"></div>
+            <div id="active-layer" class="absolute top-0 left-0 z-[2] pointer-events-none will-change-transform"></div>
+          </div>
         </div>
-        <div id="game-deadline" class="absolute left-2 right-2 h-0.5 bg-error/60 shadow-[0_0_8px_rgba(255,80,80,0.5)] pointer-events-none" style="bottom: 12px"></div>
-        <p class="absolute bottom-1 left-0 right-0 text-center font-label text-[8px] font-bold uppercase tracking-widest text-error/60 pointer-events-none">Miss the word past this line and you lose a life</p>
+        <p id="falling-word-hint" class="shrink-0 font-headline uppercase tracking-[0.2em] text-[10px] font-bold text-primary glow-cyan text-center opacity-90 pointer-events-none min-h-[1rem]"></p>
       </div>
 
       <div class="w-full max-w-[480px] mt-8 mb-2 relative shrink-0 flex-none">
@@ -127,7 +101,7 @@
           <input
             id="typing-input"
             class="w-full bg-transparent border-2 border-outline-variant/30 py-4 px-6 font-headline text-xl focus:border-primary focus:ring-0 placeholder:text-outline-variant/40 transition-all uppercase tracking-widest text-primary glow-cyan"
-            placeholder="Start typing..."
+            placeholder="Type the word on the block..."
             type="text"
             autocomplete="off"
             autocapitalize="characters"
@@ -135,10 +109,10 @@
           />
           <div class="absolute inset-0 border-2 border-primary/0 group-focus-within:border-primary/50 pointer-events-none blur-sm transition-all"></div>
         </div>
+        <p id="typing-hint" class="mt-2 font-label text-[10px] text-on-surface-variant/70 uppercase tracking-widest"></p>
       </div>
     </section>
 
-    <!-- Right Column: Level & Combo Info -->
     <section class="col-span-3 flex flex-col gap-6 min-h-0 overflow-hidden">
       <div class="bg-surface-container-high p-6 shadow-[0_0_20px_rgba(0,0,0,0.4)] border-l-2 border-primary/20">
         <h3 class="font-label text-[10px] font-extrabold uppercase tracking-[0.2rem] text-primary mb-6">LEVEL &amp; PROGRESS</h3>
@@ -164,11 +138,11 @@
         <h3 class="font-label text-[10px] font-extrabold uppercase tracking-[0.2rem] text-primary mb-6">COMBO &amp; STREAK</h3>
         <div class="space-y-6">
           <div>
-            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">TYPING STREAK:</p>
+            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">LINE STREAK:</p>
             <p id="hud-streak" class="font-headline text-4xl font-bold text-primary-container">0</p>
           </div>
           <div>
-            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">COMBO MULTIPLIER:</p>
+            <p class="font-label text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest mb-1">MULTIPLIER:</p>
             <p id="hud-combo-multiplier" class="font-headline text-3xl font-bold text-secondary glow-cyan" style="text-shadow: 0 0 10px rgba(255, 81, 250, 0.6);">x1</p>
           </div>
           <div>
@@ -180,31 +154,70 @@
     </section>
   </main>
 
-  <!-- Pause Button -->
   <button id="pause-button" type="button" class="fixed bottom-6 right-6 px-4 py-2 bg-transparent border border-outline-variant text-outline-variant font-headline font-bold text-[10px] tracking-widest hover:border-error hover:text-error transition-all flex items-center justify-center gap-2 z-50">
-    <span class="material-symbols-outlined text-sm" data-icon="pause">pause</span>
+    <span class="material-symbols-outlined text-sm">pause</span>
     PAUSE
   </button>
 
-  <!-- Pause Overlay (Stage 0: toggle visibility, no game loop yet) -->
   <div id="pause-overlay" class="fixed inset-0 hidden z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center">
-    <div class="bg-surface-container-high border border-outline-variant/30 w-full max-w-md p-8 shadow-2xl">
-      <h2 class="font-headline text-4xl font-black text-primary neon-glow-primary mb-6">PAUSED</h2>
-      <p class="text-on-surface-variant/80 mb-6">Press resume to continue typing.</p>
-      <div class="flex gap-4">
-        <button id="pause-resume" type="button" class="flex-1 py-3 bg-primary-container text-on-primary-container font-headline font-bold uppercase tracking-widest hover:brightness-110 transition-all active:scale-[0.98]">
-          RESUME
-        </button>
-        <a href="player-menu.html" class="flex-1 py-3 border border-outline-variant bg-surface-container/50 text-on-surface-variant font-headline font-bold uppercase tracking-widest hover:border-primary hover:text-primary transition-all active:scale-[0.98] text-center inline-block">
-          EXIT
-        </a>
+    <main class="relative z-50 w-full max-w-md mx-4">
+      <div class="bg-surface-container border border-outline-variant/30 glow-primary p-10 flex flex-col items-center text-center">
+        <!-- Header Icon -->
+        <div class="mb-6">
+          <span
+            class="material-symbols-outlined text-6xl text-primary-container glow-icon"
+            data-icon="pause"
+            style="font-variation-settings: 'FILL' 1;"
+          >
+            pause
+          </span>
+        </div>
+        <!-- Heading -->
+        <h1 class="font-headline text-5xl font-black tracking-tighter mb-8 text-on-surface uppercase">
+          GAME PAUSED
+        </h1>
+        <!-- Action Menu -->
+        <nav class="w-full space-y-4">
+          <!-- RESUME: Solid Cyan -->
+          <button
+            id="pause-resume"
+            type="button"
+            class="w-full py-4 bg-primary-container text-on-primary-container font-headline font-bold text-lg hover:bg-primary transition-all duration-200 active:scale-95 flex items-center justify-center gap-2 group"
+          >
+            RESUME
+          </button>
+
+          <!-- OPTIONS: Dark Outlined -->
+          <button
+            id="pause-options"
+            type="button"
+            class="w-full py-4 bg-transparent border-2 border-outline-variant text-on-surface font-headline font-bold text-lg hover:border-primary-container hover:text-primary-container transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
+          >
+            OPTIONS
+          </button>
+
+          <!-- SAVE GAME: Dark Outlined -->
+          <button
+            id="pause-save"
+            type="button"
+            class="w-full py-4 bg-transparent border-2 border-outline-variant text-on-surface font-headline font-bold text-lg hover:border-primary-container hover:text-primary-container transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
+          >
+            SAVE GAME
+          </button>
+
+          <!-- QUIT GAME: Dark Outlined with Error text -->
+          <button
+            id="pause-quit"
+            type="button"
+            class="w-full py-4 bg-transparent border-2 border-outline-variant text-error font-headline font-bold text-lg hover:border-error transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
+          >
+            QUIT GAME
+          </button>
+        </nav>
       </div>
-    </div>
+    </main>
   </div>
 
-  <!-- Visual HUD Overlays -->
   <div class="fixed bottom-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-primary/20 to-transparent pointer-events-none"></div>
-  <div class="fixed top-0 right-0 w-1 h-full bg-gradient-to-b from-transparent via-secondary/10 to-transparent pointer-events-none"></div>
 </body>
 </html>
-

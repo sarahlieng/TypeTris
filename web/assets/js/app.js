@@ -2,6 +2,65 @@
 (function () {
   "use strict";
 
+  function difficultyProgressStorageKey() {
+    var u = sessionStorage.getItem("typetrisPlayerUsername");
+    if (!u) {
+      return null;
+    }
+    u = String(u).trim();
+    if (!u) {
+      return null;
+    }
+    return "typetrisTierMaxClear:" + encodeURIComponent(u);
+  }
+
+  function tierMaxClearedMap() {
+    var key = difficultyProgressStorageKey();
+    if (!key) {
+      return {};
+    }
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function typetrisIsSubLevelUnlocked(tier, subLevel) {
+    var t = String(tier || "easy").toLowerCase();
+    var n = Math.max(1, Math.min(3, Number(subLevel) || 1));
+    if (n <= 1) {
+      return true;
+    }
+    if (!difficultyProgressStorageKey()) {
+      return false;
+    }
+    var maxC = Number(tierMaxClearedMap()[t]) || 0;
+    return maxC >= n - 1;
+  }
+
+  function typetrisRecordSubLevelClear(tier, subLevel) {
+    var key = difficultyProgressStorageKey();
+    if (!key) {
+      return;
+    }
+    var t = String(tier || "easy").toLowerCase();
+    var lv = Math.max(1, Math.min(3, Number(subLevel) || 1));
+    var map = tierMaxClearedMap();
+    map[t] = Math.max(Number(map[t]) || 0, lv);
+    try {
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  window.typetrisDifficultyProgress = {
+    recordClear: typetrisRecordSubLevelClear,
+    isUnlocked: typetrisIsSubLevelUnlocked
+  };
+
   function showMessage(element, text, isError) {
     if (!element) {
       return;
@@ -190,12 +249,24 @@
 
     var buttons = root.querySelectorAll(".difficulty-level-btn");
     buttons.forEach(function (btn) {
+      var tier = btn.getAttribute("data-tier") || "";
+      var levelNum = Number(btn.getAttribute("data-level")) || 1;
+      if (!typetrisIsSubLevelUnlocked(tier, levelNum)) {
+        btn.disabled = true;
+        btn.classList.add("opacity-45", "cursor-not-allowed", "pointer-events-none");
+        btn.setAttribute("aria-disabled", "true");
+        btn.title = "Finish " + tier.toUpperCase() + " level " + (levelNum - 1) + " first.";
+      }
       btn.addEventListener("click", function () {
-        var tier = btn.getAttribute("data-tier") || "";
-        var level = btn.getAttribute("data-level") || "";
+        if (btn.disabled) {
+          return;
+        }
+        if (!typetrisIsSubLevelUnlocked(tier, levelNum)) {
+          return;
+        }
         sessionStorage.setItem(
           "typetrisDifficulty",
-          JSON.stringify({ tier: tier, level: Number(level) })
+          JSON.stringify({ tier: tier, level: levelNum })
         );
         window.location.href = "gameplay.html";
       });
