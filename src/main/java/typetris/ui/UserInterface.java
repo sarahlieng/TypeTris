@@ -135,7 +135,9 @@ public final class UserInterface extends JFrame {
         root.add(buildGameOverPanel(), CARD_GAME_OVER);
 
         getContentPane().setBackground(TypeTrisTheme.SURFACE);
-        root.setOpaque(false);
+        // Opaque root so CardLayout always paints the active card (opaque=false can hide swaps on some LAFs).
+        root.setOpaque(true);
+        root.setBackground(TypeTrisTheme.SURFACE);
         gameplayHost.setOpaque(true);
         gameplayHost.setBackground(TypeTrisTheme.SURFACE);
 
@@ -183,15 +185,30 @@ public final class UserInterface extends JFrame {
         }
         teardownGameplay();
         setMinimumSize(new Dimension(960, 640));
-        GameplayPanel gp =
-                new GameplayPanel(auth, loggedInUser, gameTier, gameSubLevel, () -> {}, this::onGameplayNavigate);
-        activeGameplay = gp;
-        gameplayHost.add(gp, BorderLayout.CENTER);
-        gameplayHost.revalidate();
-        gameplayHost.repaint();
-        showCard(CARD_GAMEPLAY);
-        SwingUtilities.invokeLater(gp::requestTypingFocus);
-        pack();
+        try {
+            GameplayPanel gp =
+                    new GameplayPanel(auth, loggedInUser, gameTier, gameSubLevel, () -> {}, this::onGameplayNavigate);
+            activeGameplay = gp;
+            gameplayHost.add(gp, BorderLayout.CENTER);
+            // gameplayHost was empty at first pack(); give it a real size so the gameplay card lays out.
+            Dimension gpPref = gp.getPreferredSize();
+            gameplayHost.setPreferredSize(new Dimension(Math.max(920, gpPref.width), Math.max(580, gpPref.height)));
+            gameplayHost.revalidate();
+            showCard(CARD_GAMEPLAY);
+            root.revalidate();
+            pack();
+            validate();
+            repaint();
+            SwingUtilities.invokeLater(gp::requestTypingFocus);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Could not start game: " + ex.getMessage(),
+                    "Gameplay",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+            showCard(CARD_DIFFICULTY);
+        }
     }
 
     /** Routes {@link GameplayPanel} top-bar / game-over navigation. */
@@ -237,7 +254,12 @@ public final class UserInterface extends JFrame {
             for (int lv = 1; lv <= 3; lv++) {
                 JButton b = diffButtons[t][lv - 1];
                 if (b != null) {
-                    b.setEnabled(ClientPrefs.isSubLevelUnlocked(loggedInUser, tiers[t], lv));
+                    boolean ok = ClientPrefs.isSubLevelUnlocked(loggedInUser, tiers[t], lv);
+                    b.setEnabled(ok);
+                    b.setToolTipText(
+                            ok
+                                    ? "Start " + tiers[t] + " level " + lv
+                                    : "Finish level " + (lv - 1) + " in this tier first.");
                 }
             }
         }
