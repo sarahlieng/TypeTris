@@ -71,11 +71,24 @@
   }
 
   async function postJson(url, data) {
-    var response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
+    var response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    } catch (err) {
+      // happens when page is opened as only a static server is running
+      return {
+        ok: false,
+        status: 0,
+        payload: {
+          error:
+            "This page cannot reach the server. From the project root run: mvn exec:java — then open http://localhost:8080/register.html (not a local file path)."
+        }
+      };
+    }
     var payload = {};
     try {
       payload = await response.json();
@@ -86,7 +99,20 @@
   }
 
   async function getJson(url) {
-    var response = await fetch(url);
+    var response;
+    try {
+      response = await fetch(url);
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        payload: {
+          ok: false,
+          error:
+            "This page cannot reach the server. Run mvn exec:java from the project root and use http://localhost:8080."
+        }
+      };
+    }
     var payload = {};
     try {
       payload = await response.json();

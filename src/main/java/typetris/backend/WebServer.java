@@ -19,7 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimal local HTTP server for static web UI + auth API.
+ * Minimal local HTTP server for static web UI and authentication API.
+ * 
+ * @author CS2212 Group 26, Western University
  */
 public final class WebServer {
     private static final String ADMIN_PIN = "2212";
