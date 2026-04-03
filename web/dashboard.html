@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>TYPE-TRIS | Dashboard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="assets/js/tailwind.config.js"></script>
+  <script defer src="assets/js/dashboard.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-surface text-on-surface font-body min-h-screen p-6">
+  <main class="max-w-4xl mx-auto mt-10 border border-outline-variant/30 bg-surface-container/70 p-6">
+    <header class="flex items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="font-headline text-3xl text-primary font-bold mb-1 uppercase tracking-widest">Dashboard</h1>
+        <p id="dashboard-subtitle" class="text-on-surface-variant text-sm">Switch screens to view stats and the leaderboard.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="logout-button" type="button" class="px-4 py-2 bg-secondary text-black font-headline font-bold uppercase tracking-widest text-sm hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(255,81,250,0.25)]">
+          Logout
+        </button>
+        <a href="index.html" class="px-4 py-2 bg-surface-container hover:bg-surface-bright text-on-surface font-headline font-bold uppercase tracking-widest text-sm transition-all">
+          Main menu
+        </a>
+      </div>
+    </header>
+
+    <section class="mb-6">
+      <div class="flex flex-wrap gap-3">
+        <button type="button"
+                data-card="personal-stats"
+                class="card-tab px-5 py-3 bg-primary-container/10 text-on-surface font-headline font-bold uppercase tracking-widest text-sm border border-outline-variant/30 hover:bg-primary-container/20 transition-all">
+          Personal Statistics
+        </button>
+        <button type="button"
+                data-card="leaderboard"
+                class="card-tab px-5 py-3 bg-primary-container/10 text-on-surface font-headline font-bold uppercase tracking-widest text-sm border border-outline-variant/30 hover:bg-primary-container/20 transition-all">
+          Leaderboard
+        </button>
+      </div>
+    </section>
+
+    <section id="dashboard-message" class="hidden mb-4 p-3 border border-outline-variant/30 bg-surface-container-lowest text-on-surface-variant"></section>
+
+    <!-- CardLayout: Personal Statistics -->
+    <section id="card-personal-stats" class="dashboard-card">
+      <h2 class="font-headline text-xl text-primary font-bold mb-4 uppercase">Personal Statistics</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="border border-outline-variant/30 bg-surface-container-lowest/40 p-4">
+          <div class="text-on-surface-variant text-xs uppercase tracking-widest">Best WPM</div>
+          <div id="bestWpm-label" class="font-headline text-4xl text-primary font-bold mt-2">--</div>
+        </div>
+        <div class="border border-outline-variant/30 bg-surface-container-lowest/40 p-4">
+          <div class="text-on-surface-variant text-xs uppercase tracking-widest">Average Accuracy</div>
+          <div id="avgAccuracy-label" class="font-headline text-4xl text-primary font-bold mt-2">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CardLayout: Leaderboard -->
+    <section id="card-leaderboard" class="dashboard-card hidden">
+      <h2 class="font-headline text-xl text-primary font-bold mb-4 uppercase">Leaderboard</h2>
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-on-surface-variant text-sm">Top players by high score.</div>
+        <div id="leaderboard-loading" class="hidden text-on-surface-variant text-sm">Loading...</div>
+      </div>
+      <div id="leaderboard-table-wrap" class="overflow-x-auto"></div>
+    </section>
+  </main>
+</body>
+</html>
+
