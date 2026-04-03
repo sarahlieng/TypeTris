@@ -26,6 +26,17 @@
     return { ok: response.ok, status: response.status, payload: payload };
   }
 
+  async function getJson(url) {
+    var response = await fetch(url);
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (err) {
+      payload = {};
+    }
+    return { ok: response.ok, status: response.status, payload: payload };
+  }
+
   function wireExitButtons() {
     var buttons = document.querySelectorAll("[data-exit='app']");
     buttons.forEach(function (button) {
@@ -408,12 +419,74 @@
     });
   }
 
+  function wireHighscoresPage() {
+    var root = document.getElementById("highscores-screen");
+    if (!root) {
+      return;
+    }
+    var tbody = document.getElementById("highscores-body");
+    var msg = document.getElementById("highscores-message");
+    getJson("/api/leaderboard?limit=15").then(function (result) {
+      if (!result.ok || !result.payload || !result.payload.ok) {
+        if (msg) {
+          msg.textContent =
+            "Could not load leaderboard. Run the game with mvn exec:java and open http://localhost:8080.";
+          msg.classList.remove("hidden");
+        }
+        return;
+      }
+      var rows = result.payload.leaderboard;
+      if (!tbody || !Array.isArray(rows)) {
+        return;
+      }
+      tbody.innerHTML = "";
+      if (rows.length === 0) {
+        var empty = document.createElement("tr");
+        var td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "py-8 px-4 text-center text-on-surface-variant font-body";
+        td.textContent = "No players yet. Register an account and finish a run.";
+        empty.appendChild(td);
+        tbody.appendChild(empty);
+        return;
+      }
+      rows.forEach(function (row) {
+        var tr = document.createElement("tr");
+        tr.className = "border-b border-outline-variant/15 hover:bg-surface-bright/30";
+        var rank = document.createElement("td");
+        rank.className = "py-3 px-2 font-headline text-primary";
+        rank.textContent = String(row.rank);
+        var name = document.createElement("td");
+        name.className = "py-3 px-2 font-body font-medium";
+        name.textContent = String(row.username || "");
+        var hi = document.createElement("td");
+        hi.className = "py-3 px-2 text-right tabular-nums";
+        hi.textContent = String(row.highScore != null ? row.highScore : "");
+        var wpm = document.createElement("td");
+        wpm.className = "py-3 px-2 text-right tabular-nums text-secondary";
+        wpm.textContent = String(row.bestWPM != null ? row.bestWPM : "");
+        var acc = document.createElement("td");
+        acc.className = "py-3 px-2 text-right tabular-nums text-on-surface-variant";
+        var a = row.avgAccuracy;
+        acc.textContent =
+          a == null || isNaN(Number(a)) ? "—" : Math.round(Number(a)) + "%";
+        tr.appendChild(rank);
+        tr.appendChild(name);
+        tr.appendChild(hi);
+        tr.appendChild(wpm);
+        tr.appendChild(acc);
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
   function init() {
     wireExitButtons();
     wireRegisterForm();
     wireLoginForm();
     wirePlayerMenu();
     wireDifficultyScreen();
+    wireHighscoresPage();
     wireParentalLogin();
     wireParentDashboard();
   }

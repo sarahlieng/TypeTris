@@ -220,6 +220,26 @@
       }
     }
 
+    function submitGameResultToServer() {
+      var u = sessionStorage.getItem("typetrisPlayerUsername");
+      if (!u) {
+        return Promise.resolve();
+      }
+      var payload = {
+        username: u,
+        score: state.score,
+        wpm: wpmNow(),
+        accuracy: accuracyPercent()
+      };
+      return fetch("/api/game-result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(function () {
+        return null;
+      });
+    }
+
     function loseLife() {
       if (state.over) return;
       state.streak = 0;
@@ -229,7 +249,9 @@
       if (state.lives <= 0) {
         state.over = true;
         persistBestIfNeeded(tier, subLevel, state.score);
-        window.location.href = "player-menu.html";
+        submitGameResultToServer().finally(function () {
+          window.location.href = "player-menu.html";
+        });
         return;
       }
       state.fallFrozenUntil = performance.now() + state.spawnGap;

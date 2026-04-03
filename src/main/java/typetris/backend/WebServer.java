@@ -42,8 +42,8 @@ public final class WebServer {
      * <p>
      * Routes include {@code POST /api/register}, {@code POST /api/login}, parent
      * admin
-     * POST endpoints, {@code GET /api/personal-stats}, and
-     * {@code GET /api/leaderboard}.
+     * POST endpoints, {@code GET /api/personal-stats}, {@code GET /api/leaderboard},
+     * and {@code POST /api/game-result}.
      */
     public void start() throws IOException, SQLException {
         authRepository.init();
@@ -57,6 +57,7 @@ public final class WebServer {
         server.createContext("/api/parent/accounts/reset-password", new ParentAccountsResetPasswordHandler());
         server.createContext("/api/personal-stats", new PersonalStatsHandler());
         server.createContext("/api/leaderboard", new LeaderboardHandler());
+        server.createContext("/api/game-result", new GameResultHandler());
         server.createContext("/", new StaticHandler());
         server.setExecutor(null);
         server.start();
@@ -369,6 +370,43 @@ public final class WebServer {
                 }
 
                 sendJson(exchange, 200, Map.of("ok", true, "leaderboard", out));
+            } catch (SQLException e) {
+                sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
+            }
+        }
+    }
+
+    /**
+     * Persists score / WPM / accuracy for the logged-in player (identified by username).
+     * Not cryptographically authenticated; suitable for local / coursework use.
+     */
+    private final class GameResultHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("ok", false, "error", "Method not allowed"));
+                return;
+            }
+            Map<String, String> body = readJsonBody(exchange);
+            String username = trim(body.get("username"));
+            if (username.isEmpty()) {
+                sendJson(exchange, 400, Map.of("ok", false, "error", "Username is required."));
+                return;
+            }
+            int score;
+            int wpm;
+            double accuracy;
+            try {
+                score = Integer.parseInt(trim(body.get("score")));
+                wpm = Integer.parseInt(trim(body.get("wpm")));
+                accuracy = Double.parseDouble(trim(body.get("accuracy")));
+            } catch (NumberFormatException e) {
+                sendJson(exchange, 400, Map.of("ok", false, "error", "score, wpm, and accuracy must be numbers."));
+                return;
+            }
+            try {
+                authRepository.recordGameResult(username, score, wpm, accuracy);
+                sendJson(exchange, 200, Map.of("ok", true, "message", "Stats saved."));
             } catch (SQLException e) {
                 sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
             }

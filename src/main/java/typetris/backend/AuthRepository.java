@@ -65,6 +65,7 @@ public final class AuthRepository {
             ensureColumnExists(c, "users", "high_score", "high_score INTEGER NOT NULL DEFAULT 0");
             ensureColumnExists(c, "users", "best_wpm", "best_wpm INTEGER NOT NULL DEFAULT 0");
             ensureColumnExists(c, "users", "avg_accuracy", "avg_accuracy REAL NOT NULL DEFAULT 0.0");
+            ensureColumnExists(c, "users", "games_played", "games_played INTEGER NOT NULL DEFAULT 0");
         }
     }
 
@@ -216,6 +217,54 @@ public final class AuthRepository {
      *
      * @return null if the user does not exist.
      */
+    /**
+     * Updates rolling stats after a finished run. {@code accuracyPercent} is 0–100.
+     * High score and best WPM are replaced only when the new values are higher.
+     */
+    public void recordGameResult(String username, int score, int wpm, double accuracyPercent) throws SQLException {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+        int safeScore = Math.max(0, score);
+        int safeWpm = Math.max(0, wpm);
+        double acc = Math.max(0.0, Math.min(100.0, accuracyPercent));
+        String select = """
+                SELECT high_score, best_wpm, avg_accuracy, games_played
+                FROM users
+                WHERE username = ?
+                """;
+        String update = """
+                UPDATE users
+                SET high_score = ?, best_wpm = ?, avg_accuracy = ?, games_played = ?
+                WHERE username = ?
+                """;
+        try (Connection c = DriverManager.getConnection(jdbcUrl);
+             PreparedStatement psSel = c.prepareStatement(select)) {
+            psSel.setString(1, username);
+            try (ResultSet rs = psSel.executeQuery()) {
+                if (!rs.next()) {
+                    return;
+                }
+                int oldHigh = rs.getInt("high_score");
+                int oldBestWpm = rs.getInt("best_wpm");
+                double oldAvg = rs.getDouble("avg_accuracy");
+                int gamesPlayed = rs.getInt("games_played");
+                int newHigh = Math.max(oldHigh, safeScore);
+                int newBestWpm = Math.max(oldBestWpm, safeWpm);
+                int newGames = gamesPlayed + 1;
+                double newAvg = (oldAvg * gamesPlayed + acc) / newGames;
+                try (PreparedStatement psUp = c.prepareStatement(update)) {
+                    psUp.setInt(1, newHigh);
+                    psUp.setInt(2, newBestWpm);
+                    psUp.setDouble(3, newAvg);
+                    psUp.setInt(4, newGames);
+                    psUp.setString(5, username);
+                    psUp.executeUpdate();
+                }
+            }
+        }
+    }
+
     public PlayerAccount findPlayerAccount(String username) throws SQLException {
         String sql = """
                 SELECT username, high_score, best_wpm, avg_accuracy
