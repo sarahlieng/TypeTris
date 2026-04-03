@@ -4,18 +4,28 @@ Typing + Tetris-style game — **CS2212 Group 26**, Winter 2026.
 
 ## User interface
 
-- **Tailwind (recommended for the design):** open [`web/index.html`](web/index.html) in a browser; see [`web/README.md`](web/README.md).
-- **Java:** Maven project (`pom.xml`). The `typetris.App` entry point can be used for backend-only runs or demos; the visual menu is maintained in **`web/`**.
+The app runs as a **Java Swing desktop UI** (`typetris.ui.UserInterface`), launched from `typetris.App`. There is **no** HTML/CSS frontend in this tree.
 
-## Build (Java)
+## Build & run (Java)
+
+From the repository root (where `pom.xml` is):
 
 ```bash
-mvn compile
-mvn test
+mvn compile exec:java
 ```
 
-Requires **JDK 23+** and Maven.
+Or:
 
-## Docs
+```bash
+mvn
+```
 
-- [`docs/SWING_VS_HTML.md`](docs/SWING_VS_HTML.md) — why the browser UI matches the design better than Swing alone.
+(`compile` runs first so classes exist before `exec:java`.)
+
+Requires **JDK 21+** (see `maven.compiler.release` in `pom.xml`) and **Maven**.
+
+Account data and stats are stored in **`data/type-tris.db`** (SQLite).
+
+## Optional HTTP API
+
+`typetris.backend.WebServer` can still be used as a small embedded HTTP API (e.g. for testing), but **`App` does not start it** — the default entry point is Swing only.

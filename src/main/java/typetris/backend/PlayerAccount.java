@@ -5,6 +5,8 @@ package typetris.backend;
  *
  * <p>Note: this is intentionally lightweight; the project design may later expand it
  * to include sessions and additional performance metrics.
+ * 
+ * @author CS2212 Group 26, Western University
  */
 public record PlayerAccount(
         String username,
