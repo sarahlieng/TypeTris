@@ -2,9 +2,11 @@ package typetris.ui;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GridLayout;
 import java.sql.SQLException;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -25,12 +27,14 @@ import typetris.backend.AuthRepository;
 import typetris.backend.Leaderboard;
 import typetris.backend.PasswordUtil;
 import typetris.backend.PlayerAccount;
+import typetris.gameplay.GameplayPanel;
 
 /**
  * Desktop shell for Type-tris: one {@link JFrame} with a {@link CardLayout} root.
  * <p>
  * Screens mirror the former static HTML flow: main menu, login/register, logged-in player hub,
- * statistics, leaderboard, instructions, parental PIN gate + admin table, and a gameplay demo hook.
+ * statistics, leaderboard, instructions, parental PIN gate + admin table, and real gameplay
+ * ({@link GameplayPanel}) after difficulty selection.
  * All navigation is local to this class via string card names (see {@code CARD_*} constants).
  */
 public final class UserInterface extends JFrame {
@@ -41,12 +45,14 @@ public final class UserInterface extends JFrame {
     private static final String CARD_LOGIN = "login";
     private static final String CARD_REGISTER = "register";
     private static final String CARD_PLAYER = "player";
+    private static final String CARD_DIFFICULTY = Screens.DIFFICULTY;
+    private static final String CARD_GAMEPLAY = Screens.GAMEPLAY;
+    private static final String CARD_GAME_OVER = Screens.GAME_OVER;
     private static final String CARD_STATS = "stats";
     private static final String CARD_LEADERBOARD = "leaderboard";
     private static final String CARD_INSTRUCTIONS = "instructions";
     private static final String CARD_PARENT = "parent";
     private static final String CARD_PARENT_DASH = "parentDash";
-    private static final String CARD_GAME = "game";
 
     /** demo PIN for parent/teacher dashboard */
     private static final String ADMIN_PIN = "2212";
@@ -84,6 +90,22 @@ public final class UserInterface extends JFrame {
 
     private final JTable parentTable = new JTable(parentModel);
 
+    /** Host panel for {@link GameplayPanel}; swapped on each new run. */
+    private final JPanel gameplayHost = new JPanel(new BorderLayout());
+
+    /** Active session, or {@code null} when not on the gameplay card. */
+    private GameplayPanel activeGameplay;
+
+    /** Last-started tier / sub-level (1–3); used for restart and new {@link GameplayPanel} instances. */
+    private String gameTier = "easy";
+
+    private int gameSubLevel = 1;
+
+    /** [tier index 0–2][level index 0–2] for unlock refresh. */
+    private final JButton[][] diffButtons = new JButton[3][3];
+
+    private final JLabel gameOverScore = new JLabel("0");
+
     public UserInterface(AuthRepository auth) {
         this.auth = auth;
         setTitle("TYPE-TRIS");
@@ -99,7 +121,9 @@ public final class UserInterface extends JFrame {
         root.add(buildInstructionsPanel(), CARD_INSTRUCTIONS);
         root.add(buildParentPanel(), CARD_PARENT);
         root.add(buildParentDashboardPanel(), CARD_PARENT_DASH);
-        root.add(buildGamePanel(), CARD_GAME);
+        root.add(buildDifficultyPanel(), CARD_DIFFICULTY);
+        root.add(gameplayHost, CARD_GAMEPLAY);
+        root.add(buildGameOverPanel(), CARD_GAME_OVER);
 
         add(root, BorderLayout.CENTER);
         showCard(CARD_MENU);
