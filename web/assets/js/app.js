@@ -231,8 +231,10 @@
     var logoutBtn = document.getElementById("player-menu-logout");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", function () {
-        sessionStorage.removeItem("typetrisPlayerUsername");
-        window.location.href = "index.html";
+        // Student logout confirmation flow.
+        // Store where to return if the user cancels.
+        sessionStorage.setItem("typetrisLogoutReturnUrl", "player-menu.html");
+        window.location.href = "logout-confirmation.html";
       });
     }
   }
