@@ -11,7 +11,7 @@ public record PlayerAccount(
         int highScore,
         int bestWPM,
         /**
-         * Average accuracy as a ratio (0.0 - 1.0). The UI formats it as a percentage.
+         * Rolling average accuracy as a percentage (0–100), updated after each recorded run.
          */
         double avgAccuracy
 ) {}

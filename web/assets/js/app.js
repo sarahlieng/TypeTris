@@ -2,6 +2,65 @@
 (function () {
   "use strict";
 
+  function difficultyProgressStorageKey() {
+    var u = sessionStorage.getItem("typetrisPlayerUsername");
+    if (!u) {
+      return null;
+    }
+    u = String(u).trim();
+    if (!u) {
+      return null;
+    }
+    return "typetrisTierMaxClear:" + encodeURIComponent(u);
+  }
+
+  function tierMaxClearedMap() {
+    var key = difficultyProgressStorageKey();
+    if (!key) {
+      return {};
+    }
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function typetrisIsSubLevelUnlocked(tier, subLevel) {
+    var t = String(tier || "easy").toLowerCase();
+    var n = Math.max(1, Math.min(3, Number(subLevel) || 1));
+    if (n <= 1) {
+      return true;
+    }
+    if (!difficultyProgressStorageKey()) {
+      return false;
+    }
+    var maxC = Number(tierMaxClearedMap()[t]) || 0;
+    return maxC >= n - 1;
+  }
+
+  function typetrisRecordSubLevelClear(tier, subLevel) {
+    var key = difficultyProgressStorageKey();
+    if (!key) {
+      return;
+    }
+    var t = String(tier || "easy").toLowerCase();
+    var lv = Math.max(1, Math.min(3, Number(subLevel) || 1));
+    var map = tierMaxClearedMap();
+    map[t] = Math.max(Number(map[t]) || 0, lv);
+    try {
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  window.typetrisDifficultyProgress = {
+    recordClear: typetrisRecordSubLevelClear,
+    isUnlocked: typetrisIsSubLevelUnlocked
+  };
+
   function showMessage(element, text, isError) {
     if (!element) {
       return;
@@ -17,6 +76,17 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (err) {
+      payload = {};
+    }
+    return { ok: response.ok, status: response.status, payload: payload };
+  }
+
+  async function getJson(url) {
+    var response = await fetch(url);
     var payload = {};
     try {
       payload = await response.json();
@@ -134,7 +204,74 @@
         openModal(result.payload.error || "The username or password you entered is incorrect. Please try again.");
         return;
       }
-      showMessage(msg, "Login successful.", false);
+      sessionStorage.setItem("typetrisPlayerUsername", username);
+      window.location.href = "player-menu.html";
+    });
+  }
+
+  function wirePlayerMenu() {
+    var usernameEl = document.getElementById("player-menu-username");
+    if (!usernameEl) {
+      return;
+    }
+    var name = sessionStorage.getItem("typetrisPlayerUsername");
+    if (!name) {
+      window.location.href = "login.html";
+      return;
+    }
+    usernameEl.textContent = name;
+
+    var saveBtn = document.getElementById("player-menu-save");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        window.alert("Save game is not implemented yet.");
+      });
+    }
+
+    var logoutBtn = document.getElementById("player-menu-logout");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function () {
+        // Student logout confirmation flow.
+        // Store where to return if the user cancels.
+        sessionStorage.setItem("typetrisLogoutReturnUrl", "player-menu.html");
+        window.location.href = "logout-confirmation.html";
+      });
+    }
+  }
+
+  function wireDifficultyScreen() {
+    var root = document.getElementById("difficulty-screen");
+    if (!root) {
+      return;
+    }
+    if (!sessionStorage.getItem("typetrisPlayerUsername")) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    var buttons = root.querySelectorAll(".difficulty-level-btn");
+    buttons.forEach(function (btn) {
+      var tier = btn.getAttribute("data-tier") || "";
+      var levelNum = Number(btn.getAttribute("data-level")) || 1;
+      if (!typetrisIsSubLevelUnlocked(tier, levelNum)) {
+        btn.disabled = true;
+        btn.classList.add("opacity-45", "cursor-not-allowed", "pointer-events-none");
+        btn.setAttribute("aria-disabled", "true");
+        btn.title = "Finish " + tier.toUpperCase() + " level " + (levelNum - 1) + " first.";
+      }
+      btn.addEventListener("click", function () {
+        if (btn.disabled) {
+          return;
+        }
+        if (!typetrisIsSubLevelUnlocked(tier, levelNum)) {
+          return;
+        }
+        sessionStorage.setItem(
+          "typetrisDifficulty",
+          JSON.stringify({ tier: tier, level: levelNum })
+        );
+        window.location.href = "gameplay.html";
+      });
     });
   }
 
@@ -355,10 +492,74 @@
     });
   }
 
+  function wireHighscoresPage() {
+    var root = document.getElementById("highscores-screen");
+    if (!root) {
+      return;
+    }
+    var tbody = document.getElementById("highscores-body");
+    var msg = document.getElementById("highscores-message");
+    getJson("/api/leaderboard?limit=15").then(function (result) {
+      if (!result.ok || !result.payload || !result.payload.ok) {
+        if (msg) {
+          msg.textContent =
+            "Could not load leaderboard. Run the game with mvn exec:java and open http://localhost:8080.";
+          msg.classList.remove("hidden");
+        }
+        return;
+      }
+      var rows = result.payload.leaderboard;
+      if (!tbody || !Array.isArray(rows)) {
+        return;
+      }
+      tbody.innerHTML = "";
+      if (rows.length === 0) {
+        var empty = document.createElement("tr");
+        var td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "py-8 px-4 text-center text-on-surface-variant font-body";
+        td.textContent = "No players yet. Register an account and finish a run.";
+        empty.appendChild(td);
+        tbody.appendChild(empty);
+        return;
+      }
+      rows.forEach(function (row) {
+        var tr = document.createElement("tr");
+        tr.className = "border-b border-outline-variant/15 hover:bg-surface-bright/30";
+        var rank = document.createElement("td");
+        rank.className = "py-3 px-2 font-headline text-primary";
+        rank.textContent = String(row.rank);
+        var name = document.createElement("td");
+        name.className = "py-3 px-2 font-body font-medium";
+        name.textContent = String(row.username || "");
+        var hi = document.createElement("td");
+        hi.className = "py-3 px-2 text-right tabular-nums";
+        hi.textContent = String(row.highScore != null ? row.highScore : "");
+        var wpm = document.createElement("td");
+        wpm.className = "py-3 px-2 text-right tabular-nums text-secondary";
+        wpm.textContent = String(row.bestWPM != null ? row.bestWPM : "");
+        var acc = document.createElement("td");
+        acc.className = "py-3 px-2 text-right tabular-nums text-on-surface-variant";
+        var a = row.avgAccuracy;
+        acc.textContent =
+          a == null || isNaN(Number(a)) ? "—" : Math.round(Number(a)) + "%";
+        tr.appendChild(rank);
+        tr.appendChild(name);
+        tr.appendChild(hi);
+        tr.appendChild(wpm);
+        tr.appendChild(acc);
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
   function init() {
     wireExitButtons();
     wireRegisterForm();
     wireLoginForm();
+    wirePlayerMenu();
+    wireDifficultyScreen();
+    wireHighscoresPage();
     wireParentalLogin();
     wireParentDashboard();
   }
