@@ -134,8 +134,37 @@
         openModal(result.payload.error || "The username or password you entered is incorrect. Please try again.");
         return;
       }
-      showMessage(msg, "Login successful.", false);
+      sessionStorage.setItem("typetrisPlayerUsername", username);
+      window.location.href = "player-menu.html";
     });
+  }
+
+  function wirePlayerMenu() {
+    var usernameEl = document.getElementById("player-menu-username");
+    if (!usernameEl) {
+      return;
+    }
+    var name = sessionStorage.getItem("typetrisPlayerUsername");
+    if (!name) {
+      window.location.href = "login.html";
+      return;
+    }
+    usernameEl.textContent = name;
+
+    var saveBtn = document.getElementById("player-menu-save");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        window.alert("Save game is not implemented yet.");
+      });
+    }
+
+    var logoutBtn = document.getElementById("player-menu-logout");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", function () {
+        sessionStorage.removeItem("typetrisPlayerUsername");
+        window.location.href = "index.html";
+      });
+    }
   }
 
   function wireParentalLogin() {
@@ -359,6 +388,7 @@
     wireExitButtons();
     wireRegisterForm();
     wireLoginForm();
+    wirePlayerMenu();
     wireParentalLogin();
     wireParentDashboard();
   }
