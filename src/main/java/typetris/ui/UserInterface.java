@@ -34,7 +34,7 @@ import typetris.gameplay.GameplayPanel;
  * <p>
  * Screens mirror the former static HTML flow: main menu, login/register, logged-in player hub,
  * statistics, leaderboard, instructions, parental PIN gate + admin table, and real gameplay
- * ({@link GameplayPanel}) after difficulty selection.
+
  * All navigation is local to this class via string card names (see {@code CARD_*} constants).
  */
 public final class UserInterface extends JFrame {
@@ -137,13 +137,96 @@ public final class UserInterface extends JFrame {
         if (CARD_PLAYER.equals(name) && loggedInUser != null) {
             playerWelcome.setText("Logged in as: " + loggedInUser);
         }
+        if (CARD_DIFFICULTY.equals(name)) {
+            refreshDifficultyLocks();
+        }
+        if (CARD_GAMEPLAY.equals(name) && activeGameplay != null) {
+            SwingUtilities.invokeLater(() -> activeGameplay.requestTypingFocus());
+        }
     }
 
     private void goPlayerMenu() {
+        setMinimumSize(new Dimension(720, 520));
         if (loggedInUser != null) {
             playerWelcome.setText("Logged in as: " + loggedInUser);
         }
         showCard(CARD_PLAYER);
+    }
+
+    private void teardownGameplay() {
+        if (activeGameplay != null) {
+            activeGameplay.stopTimer();
+            activeGameplay = null;
+        }
+        gameplayHost.removeAll();
+        gameplayHost.revalidate();
+        gameplayHost.repaint();
+    }
+
+    private void mountGameplay() {
+        if (loggedInUser == null) {
+            return;
+        }
+        teardownGameplay();
+        setMinimumSize(new Dimension(960, 640));
+        GameplayPanel gp =
+                new GameplayPanel(auth, loggedInUser, gameTier, gameSubLevel, () -> {}, this::onGameplayNavigate);
+        activeGameplay = gp;
+        gameplayHost.add(gp, BorderLayout.CENTER);
+        gameplayHost.revalidate();
+        gameplayHost.repaint();
+        showCard(CARD_GAMEPLAY);
+        SwingUtilities.invokeLater(gp::requestTypingFocus);
+        pack();
+    }
+
+    /** Routes {@link GameplayPanel} top-bar / game-over navigation. */
+    private void onGameplayNavigate(String screen) {
+        if (Screens.GAME_OVER.equals(screen)) {
+            int s = activeGameplay != null ? activeGameplay.getLastScore() : 0;
+            gameOverScore.setText(String.valueOf(s));
+            showCard(CARD_GAME_OVER);
+            return;
+        }
+        if (Screens.DIFFICULTY.equals(screen)) {
+            teardownGameplay();
+            refreshDifficultyLocks();
+            showCard(CARD_DIFFICULTY);
+            return;
+        }
+        if (Screens.PLAYER.equals(screen)) {
+            teardownGameplay();
+            goPlayerMenu();
+        }
+    }
+
+    private void startGameAt(String tier, int subLevel) {
+        if (loggedInUser == null) {
+            JOptionPane.showMessageDialog(this, "Log in first.", "Play", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!ClientPrefs.isSubLevelUnlocked(loggedInUser, tier, subLevel)) {
+            JOptionPane.showMessageDialog(this, "Clear the previous level in this tier first.", "Locked", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        gameTier = tier;
+        gameSubLevel = subLevel;
+        mountGameplay();
+    }
+
+    private void refreshDifficultyLocks() {
+        if (loggedInUser == null) {
+            return;
+        }
+        String[] tiers = { "easy", "medium", "hard" };
+        for (int t = 0; t < 3; t++) {
+            for (int lv = 1; lv <= 3; lv++) {
+                JButton b = diffButtons[t][lv - 1];
+                if (b != null) {
+                    b.setEnabled(ClientPrefs.isSubLevelUnlocked(loggedInUser, tiers[t], lv));
+                }
+            }
+        }
     }
 
     /** consistent outer insets for every full-screen card body. */
@@ -329,9 +412,16 @@ public final class UserInterface extends JFrame {
         p.add(playerWelcome);
         p.add(javax.swing.Box.createVerticalStrut(16));
 
-        JButton game = new JButton("Play (demo)");
+        JButton game = new JButton("Start game");
         game.setAlignmentX(CENTER_ALIGNMENT);
-        game.addActionListener(e -> showCard(CARD_GAME));
+        game.addActionListener(e -> {
+            if (loggedInUser == null) {
+                JOptionPane.showMessageDialog(this, "Log in first.", "Play", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            refreshDifficultyLocks();
+            showCard(CARD_DIFFICULTY);
+        });
         p.add(game);
         p.add(javax.swing.Box.createVerticalStrut(8));
 
@@ -466,7 +556,7 @@ public final class UserInterface extends JFrame {
         JTextArea area = new JTextArea(
                 "TYPE-TRIS — typing + Tetris-style play.\n\n"
                         + "• Register an account or log in.\n"
-                        + "• Use Play (demo) to open the gameplay screen; you can record a sample score to test the database.\n"
+                        + "• Use Start game to pick a tier and level, then type words to unlock pieces and clear lines.\n"
                         + "• Parent/teacher tools use PIN 2212 (course demo).\n",
                 8,
                 40);
@@ -606,41 +696,100 @@ public final class UserInterface extends JFrame {
         }
     }
 
-    // gameplay demo
+    // difficulty + game over (real gameplay session)
 
-    private JPanel buildGamePanel() {
-        JTextArea info = new JTextArea(
-                "Gameplay UI in the browser used HTML/JS. This desktop build provides a demo hook into the same SQLite stats.\n\n"
-                        + "Use the button below to record a sample game result for your logged-in user (updates high score / WPM / accuracy rolling average).",
-                6,
-                44);
-        info.setEditable(false);
-        info.setLineWrap(true);
-        info.setWrapStyleWord(true);
-
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton demo = new JButton("Record demo result");
-        demo.addActionListener(e -> {
-            if (loggedInUser == null) {
-                JOptionPane.showMessageDialog(this, "Not logged in.", "Game", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            try {
-                auth.recordGameResult(loggedInUser, 120, 48, 92.0);
-                JOptionPane.showMessageDialog(this, "Saved a demo result for " + loggedInUser + ".", "Game", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Game", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        JButton back = new JButton("Back to menu");
+    private JPanel buildDifficultyPanel() {
+        JPanel outer = new JPanel(new BorderLayout(0, 16));
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton back = new JButton("Back");
         back.addActionListener(e -> goPlayerMenu());
-        buttons.add(demo);
-        buttons.add(back);
+        top.add(back);
+        outer.add(top, BorderLayout.NORTH);
 
-        JPanel p = new JPanel(new BorderLayout(0, 12));
-        p.add(new JScrollPane(info), BorderLayout.CENTER);
-        p.add(buttons, BorderLayout.SOUTH);
-        return padded(p);
+        JPanel centerWrap = new JPanel(new BorderLayout(8, 16));
+        JLabel heading = new JLabel("SELECT GAME LEVEL");
+        heading.setFont(TypeTrisTheme.label(12f, Font.BOLD));
+        heading.setForeground(TypeTrisTheme.SECONDARY);
+        heading.setHorizontalAlignment(JLabel.CENTER);
+        centerWrap.add(heading, BorderLayout.NORTH);
+        JPanel tiers = new JPanel(new GridLayout(1, 3, 16, 0));
+        tiers.add(buildTierColumn("easy", "EASY", TypeTrisTheme.PRIMARY, 0));
+        tiers.add(buildTierColumn("medium", "MEDIUM", TypeTrisTheme.YELLOW_MEDIUM, 1));
+        tiers.add(buildTierColumn("hard", "HARD", TypeTrisTheme.SECONDARY, 2));
+        centerWrap.add(tiers, BorderLayout.CENTER);
+        outer.add(centerWrap, BorderLayout.CENTER);
+
+        return padded(outer);
+    }
+
+    private JPanel buildTierColumn(String tierKey, String title, Color titleColor, int tierIndex) {
+        JPanel col = new JPanel();
+        col.setLayout(new javax.swing.BoxLayout(col, javax.swing.BoxLayout.Y_AXIS));
+        col.setBorder(BorderFactory.createLineBorder(TypeTrisTheme.OUTLINE_VARIANT));
+        JLabel h = new JLabel(title);
+        h.setFont(TypeTrisTheme.headline(18f, Font.BOLD));
+        h.setForeground(titleColor);
+        h.setAlignmentX(CENTER_ALIGNMENT);
+        col.add(javax.swing.Box.createVerticalStrut(8));
+        col.add(h);
+        col.add(javax.swing.Box.createVerticalStrut(16));
+        for (int lv = 1; lv <= 3; lv++) {
+            int level = lv;
+            JButton b = new JButton("Level " + level);
+            b.setAlignmentX(CENTER_ALIGNMENT);
+            b.addActionListener(e -> startGameAt(tierKey, level));
+            diffButtons[tierIndex][lv - 1] = b;
+            col.add(b);
+            col.add(javax.swing.Box.createVerticalStrut(8));
+        }
+        col.add(javax.swing.Box.createVerticalGlue());
+        return col;
+    }
+
+    private JPanel buildGameOverPanel() {
+        JPanel c = new JPanel();
+        c.setLayout(new javax.swing.BoxLayout(c, javax.swing.BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel("GAME OVER");
+        title.setFont(TypeTrisTheme.headline(28f, Font.BOLD));
+        title.setForeground(TypeTrisTheme.ON_SURFACE);
+        title.setAlignmentX(CENTER_ALIGNMENT);
+
+        JLabel sub = new JLabel("YOUR FINAL SCORE");
+        sub.setFont(TypeTrisTheme.label(10f, Font.BOLD));
+        sub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        sub.setAlignmentX(CENTER_ALIGNMENT);
+
+        gameOverScore.setFont(TypeTrisTheme.headline(36f, Font.BOLD));
+        gameOverScore.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
+        gameOverScore.setAlignmentX(CENTER_ALIGNMENT);
+
+        JButton restart = new JButton("Restart level");
+        restart.setAlignmentX(CENTER_ALIGNMENT);
+        restart.addActionListener(e -> mountGameplay());
+
+        JButton exit = new JButton("Exit to player menu");
+        exit.setAlignmentX(CENTER_ALIGNMENT);
+        exit.addActionListener(e -> {
+            teardownGameplay();
+            goPlayerMenu();
+        });
+
+        c.add(javax.swing.Box.createVerticalStrut(24));
+        c.add(title);
+        c.add(javax.swing.Box.createVerticalStrut(16));
+        c.add(sub);
+        c.add(javax.swing.Box.createVerticalStrut(8));
+        c.add(gameOverScore);
+        c.add(javax.swing.Box.createVerticalStrut(32));
+        c.add(restart);
+        c.add(javax.swing.Box.createVerticalStrut(12));
+        c.add(exit);
+        c.add(javax.swing.Box.createVerticalGlue());
+
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.add(c, BorderLayout.CENTER);
+        return padded(wrap);
     }
 
     /**
