@@ -1,3 +1,5 @@
 # Maven
 target/
 
+#Local SQLite Database
+data/*.db

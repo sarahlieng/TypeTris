@@ -167,6 +167,30 @@
     }
   }
 
+  function wireDifficultyScreen() {
+    var root = document.getElementById("difficulty-screen");
+    if (!root) {
+      return;
+    }
+    if (!sessionStorage.getItem("typetrisPlayerUsername")) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    var buttons = root.querySelectorAll(".difficulty-level-btn");
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var tier = btn.getAttribute("data-tier") || "";
+        var level = btn.getAttribute("data-level") || "";
+        sessionStorage.setItem(
+          "typetrisDifficulty",
+          JSON.stringify({ tier: tier, level: Number(level) })
+        );
+        window.location.href = "instructions/instructions.html";
+      });
+    });
+  }
+
   function wireParentalLogin() {
     var form = document.getElementById("parental-login-form");
     if (!form) {
@@ -389,6 +413,7 @@
     wireRegisterForm();
     wireLoginForm();
     wirePlayerMenu();
+    wireDifficultyScreen();
     wireParentalLogin();
     wireParentDashboard();
   }
