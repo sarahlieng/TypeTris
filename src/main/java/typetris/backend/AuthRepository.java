@@ -338,6 +338,23 @@ public final class AuthRepository {
         }
     }
 
+    /**
+     * Clears high scores, best WPM, rolling average accuracy, and games played for every account
+     * (leaderboard / personal stats reset). Does not delete users or session history.
+     *
+     * @return number of rows updated
+     */
+    public int resetAllUsersGameStats() throws SQLException {
+        String sql = """
+                UPDATE users
+                SET high_score = 0, best_wpm = 0, avg_accuracy = 0.0, games_played = 0
+                """;
+        try (Connection c = DriverManager.getConnection(jdbcUrl);
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            return ps.executeUpdate();
+        }
+    }
+
     public record UserCredentials(String username, String passwordHash, String salt) {
     }
 
