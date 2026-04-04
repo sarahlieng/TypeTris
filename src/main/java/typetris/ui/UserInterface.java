@@ -1351,6 +1351,11 @@ public final class UserInterface extends JFrame {
         gameOverScore.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
         gameOverScore.setAlignmentX(CENTER_ALIGNMENT);
 
+        JLabel progressSaved = new JLabel("Your progress has been saved");
+        progressSaved.setFont(TypeTrisTheme.label(12f, Font.PLAIN));
+        progressSaved.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        progressSaved.setAlignmentX(CENTER_ALIGNMENT);
+
         JButton restart = new JButton("Restart level");
         restart.setAlignmentX(CENTER_ALIGNMENT);
         restart.setMaximumSize(new Dimension(320, 44));
@@ -1372,7 +1377,9 @@ public final class UserInterface extends JFrame {
         c.add(sub);
         c.add(javax.swing.Box.createVerticalStrut(8));
         c.add(gameOverScore);
-        c.add(javax.swing.Box.createVerticalStrut(32));
+        c.add(javax.swing.Box.createVerticalStrut(12));
+        c.add(progressSaved);
+        c.add(javax.swing.Box.createVerticalStrut(20));
         c.add(restart);
         c.add(javax.swing.Box.createVerticalStrut(12));
         c.add(exit);

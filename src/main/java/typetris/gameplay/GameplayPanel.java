@@ -24,6 +24,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
@@ -320,7 +321,7 @@ public final class GameplayPanel extends JPanel {
  
         center.add(playCol, BorderLayout.CENTER);
  
-        // show top bar with pause / options / stub save / quit buttons
+        // show top bar with pause / options / quit buttons
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topBar.setOpaque(false);
         JButton pauseBtn = neonButton("Pause", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
@@ -333,13 +334,10 @@ public final class GameplayPanel extends JPanel {
         });
         JButton optBtn = neonButton("Options", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
         optBtn.addActionListener(e -> navigateReplaceCard.accept(Screens.DIFFICULTY));
-        JButton svBtn = neonButton("Save", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
-        svBtn.addActionListener(e -> javax.swing.JOptionPane.showMessageDialog(this, "Save game is not implemented yet."));
         JButton quitBtn = neonButton("Quit", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE_VARIANT);
-        quitBtn.addActionListener(e -> navigateReplaceCard.accept(Screens.PLAYER));
+        quitBtn.addActionListener(e -> quitWithUnsavedWarning());
         topBar.add(pauseBtn);
         topBar.add(optBtn);
-        topBar.add(svBtn);
         topBar.add(quitBtn);
  
         // Stack main layout + pause overlay in one fixed-size band (matches compact desktop layout).
@@ -371,17 +369,25 @@ public final class GameplayPanel extends JPanel {
             refocusTypingIfNeeded();
         });
         pauseOverlay.add(resume);
-        // CHANGE 5: add the three missing pause-menu buttons to match #pause-overlay nav in gameplay.html.
-        // Original only had Resume; HTML has Resume, Options, Save Game, Quit Game.
+        // CHANGE 5: pause menu matches web — Resume, Options, Quit Game (no save stub).
         JButton pauseOptions = neonButton("Options", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
         pauseOptions.addActionListener(e -> navigateReplaceCard.accept(Screens.DIFFICULTY));
         pauseOverlay.add(pauseOptions);
-        JButton pauseSave = neonButton("Save Game", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
-        pauseSave.addActionListener(e -> javax.swing.JOptionPane.showMessageDialog(this, "Save game is not implemented yet."));
-        pauseOverlay.add(pauseSave);
         JButton pauseQuit = neonButton("Quit Game", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE_VARIANT);
-        pauseQuit.addActionListener(e -> navigateReplaceCard.accept(Screens.PLAYER));
+        pauseQuit.addActionListener(e -> quitWithUnsavedWarning());
         pauseOverlay.add(pauseQuit);
+    }
+
+    private void quitWithUnsavedWarning() {
+        int r = JOptionPane.showConfirmDialog(
+                this,
+                "Your progress will not be saved.",
+                "Quit game",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (r == JOptionPane.OK_OPTION) {
+            navigateReplaceCard.accept(Screens.PLAYER);
+        }
     }
  
     /** Places the main stack on the default layer and the pause strip on top. */

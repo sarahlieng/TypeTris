@@ -345,8 +345,9 @@
     var pauseButton = byId("pause-button");
     var resumeButton = byId("pause-resume");
     var optionsButton = byId("pause-options");
-    var saveButton = byId("pause-save");
     var quitButton = byId("pause-quit");
+    var quitConfirmOverlay = byId("quit-confirm-overlay");
+    var quitConfirmOk = byId("quit-confirm-ok");
 
     var cellSize = 28;
     var grid = [];
@@ -1194,18 +1195,36 @@
         window.location.href = "difficulty.html";
       });
     }
-    if (saveButton) {
-      saveButton.addEventListener("click", function () {
-        window.alert("Save game not implemented yet.");
-      });
+    function showQuitConfirm(show) {
+      if (!quitConfirmOverlay) return;
+      if (show) {
+        quitConfirmOverlay.classList.remove("hidden");
+        quitConfirmOverlay.setAttribute("aria-hidden", "false");
+      } else {
+        quitConfirmOverlay.classList.add("hidden");
+        quitConfirmOverlay.setAttribute("aria-hidden", "true");
+      }
+    }
+    function navigateToPlayerMenu() {
+      window.location.href = "player-menu.html";
     }
     if (quitButton) {
       quitButton.addEventListener("click", function () {
-        window.location.href = "player-menu.html";
+        showQuitConfirm(true);
+      });
+    }
+    if (quitConfirmOk) {
+      quitConfirmOk.addEventListener("click", function () {
+        showQuitConfirm(false);
+        navigateToPlayerMenu();
       });
     }
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
+        if (quitConfirmOverlay && !quitConfirmOverlay.classList.contains("hidden")) {
+          showQuitConfirm(false);
+          return;
+        }
         applyPause(!state.paused);
       }
     });
