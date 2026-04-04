@@ -29,6 +29,7 @@ public final class WebServer {
     private final int port;
     private final Path webRoot;
     private final AuthRepository authRepository;
+    private final SaveManager saveManager = new SaveManager();
     private final ObjectMapper mapper = new ObjectMapper();
     private HttpServer server;
 
@@ -60,6 +61,8 @@ public final class WebServer {
         server.createContext("/api/personal-stats", new PersonalStatsHandler());
         server.createContext("/api/leaderboard", new LeaderboardHandler());
         server.createContext("/api/game-result", new GameResultHandler());
+        server.createContext("/api/save", new SaveHandler());
+        server.createContext("/api/load", new LoadHandler());
         server.createContext("/", new StaticHandler());
         server.setExecutor(null);
         server.start();
@@ -412,6 +415,91 @@ public final class WebServer {
             } catch (SQLException e) {
                 sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
             }
+        }
+    }
+
+    private final class SaveHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("ok", false, "error", "Method not allowed"));
+                return;
+            }
+            Map<String, String> body = readJsonBody(exchange);
+            String username = trim(body.get("username"));
+            if (username.isEmpty()) {
+                sendJson(exchange, 400, Map.of("ok", false, "error", "Username is required."));
+                return;
+            }
+            try {
+                PlayerAccount acc = saveManager.loadAccount(username);
+                if (acc == null) {
+                    acc = authRepository.findPlayerAccount(username);
+                    if (acc == null) {
+                        acc = new PlayerAccount(username, 0, 0, 0.0);
+                    }
+                }
+                if (!saveManager.saveAccount(acc)) {
+                    sendJson(exchange, 500, Map.of("ok", false, "error", "Save failed."));
+                    return;
+                }
+                sendJson(exchange, 200, Map.of("ok", true));
+            } catch (SQLException e) {
+                sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
+            }
+        }
+    }
+
+    private final class LoadHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, Map.of("ok", false, "error", "Method not allowed"));
+                return;
+            }
+            String username = usernameFromLoadPath(exchange.getRequestURI().getPath());
+            if (username.isEmpty()) {
+                sendJson(exchange, 400, Map.of("ok", false, "error", "Username is required."));
+                return;
+            }
+            PlayerAccount acc = saveManager.loadAccount(username);
+            if (acc == null) {
+                exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+            }
+            byte[] data = mapper.writeValueAsBytes(acc);
+            exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+            exchange.sendResponseHeaders(200, data.length);
+            exchange.getResponseBody().write(data);
+            exchange.close();
+        }
+    }
+
+    private static String usernameFromLoadPath(String path) {
+        if (path == null) {
+            return "";
+        }
+        String prefix = "/api/load";
+        if (!path.startsWith(prefix)) {
+            return "";
+        }
+        String rest = path.length() > prefix.length() ? path.substring(prefix.length()) : "";
+        if (rest.isEmpty() || "/".equals(rest)) {
+            return "";
+        }
+        if (rest.startsWith("/")) {
+            rest = rest.substring(1);
+        }
+        int q = rest.indexOf('?');
+        if (q >= 0) {
+            rest = rest.substring(0, q);
+        }
+        try {
+            return URLDecoder.decode(rest, StandardCharsets.UTF_8).trim();
+        } catch (IllegalArgumentException e) {
+            return rest.trim();
         }
     }
 
