@@ -1023,12 +1023,28 @@ public final class UserInterface extends JFrame {
         tools.add(toolsLeft, BorderLayout.WEST);
         tools.add(toolsRight, BorderLayout.EAST);
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttons.setOpaque(false);
+        JPanel bottomLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        bottomLeft.setOpaque(false);
+        JButton createAcct = new JButton("Create new account");
+        styleSecondaryButton(createAcct);
+        createAcct.addActionListener(e -> adminCreateNewAccount());
+        JButton resetGlobalScores = new JButton("Reset global high scores");
+        styleSecondaryButton(resetGlobalScores);
+        resetGlobalScores.addActionListener(e -> adminResetGlobalHighScores());
+        bottomLeft.add(createAcct);
+        bottomLeft.add(resetGlobalScores);
+
+        JPanel bottomRight = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomRight.setOpaque(false);
         JButton back = new JButton("Back");
         styleSecondaryButton(back);
         back.addActionListener(e -> showCard(CARD_PARENT));
-        buttons.add(back);
+        bottomRight.add(back);
+
+        JPanel bottom = new JPanel(new BorderLayout(12, 0));
+        bottom.setOpaque(false);
+        bottom.add(bottomLeft, BorderLayout.WEST);
+        bottom.add(bottomRight, BorderLayout.EAST);
 
         styleAdminAccountsTable(parentTable);
         configureParentAccountsTableColumns(parentTable);
@@ -1044,8 +1060,137 @@ public final class UserInterface extends JFrame {
         top.add(tools, BorderLayout.SOUTH);
         p.add(top, BorderLayout.NORTH);
         p.add(themedScroll(parentTable), BorderLayout.CENTER);
-        p.add(buttons, BorderLayout.SOUTH);
+        p.add(bottom, BorderLayout.SOUTH);
         return themedCard(p);
+    }
+
+    /** Admin-only: create a user from a dialog; stays on the accounts screen. */
+    private void adminCreateNewAccount() {
+        JTextField email = new JTextField();
+        JTextField user = new JTextField();
+        JPasswordField pass = new JPasswordField();
+        JPasswordField confirm = new JPasswordField();
+        styleTextField(email, true);
+        styleTextField(user, true);
+        styleTextField(pass, true);
+        styleTextField(confirm, true);
+        sizeAuthField(email);
+        sizeAuthField(user);
+        sizeAuthField(pass);
+        sizeAuthField(confirm);
+
+        JLabel e1 = new JLabel("Email");
+        styleFormLabel(e1);
+        JLabel u1 = new JLabel("Username");
+        styleFormLabel(u1);
+        JLabel p1 = new JLabel("Password (min 8)");
+        styleFormLabel(p1);
+        JLabel c1 = new JLabel("Confirm password");
+        styleFormLabel(c1);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.insets = new Insets(5, 0, 5, 10);
+        lc.anchor = GridBagConstraints.LINE_END;
+        lc.gridx = 0;
+        lc.fill = GridBagConstraints.NONE;
+        lc.weightx = 0;
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.insets = new Insets(5, 0, 5, 0);
+        fc.anchor = GridBagConstraints.LINE_START;
+        fc.gridx = 1;
+        fc.fill = GridBagConstraints.HORIZONTAL;
+        fc.weightx = 1;
+        addAuthFormRow(form, lc, fc, 0, e1, email);
+        addAuthFormRow(form, lc, fc, 1, u1, user);
+        addAuthFormRow(form, lc, fc, 2, p1, pass);
+        addAuthFormRow(form, lc, fc, 3, c1, confirm);
+
+        JPanel wrap = new JPanel(new BorderLayout(0, 0));
+        wrap.setOpaque(false);
+        wrap.add(form, BorderLayout.NORTH);
+
+        int opt = JOptionPane.showConfirmDialog(
+                this,
+                wrap,
+                "Create new account",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        if (opt != JOptionPane.OK_OPTION) {
+            return;
+        }
+        String em = email.getText().trim();
+        String u = user.getText().trim();
+        String pw = new String(pass.getPassword());
+        String c = new String(confirm.getPassword());
+        if (em.isEmpty() || u.isEmpty() || pw.isEmpty() || c.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "All fields are required.", "Create account", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!pw.equals(c)) {
+            JOptionPane.showMessageDialog(this, "Passwords do not match.", "Create account", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (pw.length() < 8) {
+            JOptionPane.showMessageDialog(this, "Password must be at least 8 characters.", "Create account", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String salt = PasswordUtil.newSaltBase64();
+        String hash = PasswordUtil.hashBase64(pw, salt);
+        try {
+            AuthRepository.CreateUserResult r = auth.createUser(em, u, hash, salt);
+            switch (r) {
+                case CREATED -> {
+                    JOptionPane.showMessageDialog(
+                            this, "Account created for " + u + ".", "Create account", JOptionPane.INFORMATION_MESSAGE);
+                    refreshParentTable();
+                }
+                case EMAIL_TAKEN -> JOptionPane.showMessageDialog(
+                        this, "Email is already taken.", "Create account", JOptionPane.ERROR_MESSAGE);
+                case USERNAME_TAKEN -> JOptionPane.showMessageDialog(
+                        this, "Username is already taken.", "Create account", JOptionPane.ERROR_MESSAGE);
+                case DUPLICATE_UNKNOWN -> JOptionPane.showMessageDialog(
+                        this, "Username or email is already taken.", "Create account", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage(), "Create account", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Admin-only: zero out competitive stats for every user after confirmation and PIN check.
+     */
+    private void adminResetGlobalHighScores() {
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "This will reset high scores, best WPM, average accuracy, and games played for ALL players.\n"
+                        + "Session history and accounts are kept. This cannot be undone.\n\n"
+                        + "Are you sure?",
+                "Reset global high scores",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+        String pin = JOptionPane.showInputDialog(this, "Enter admin PIN to confirm:");
+        if (pin == null) {
+            return;
+        }
+        if (!ADMIN_PIN.equals(pin.trim())) {
+            JOptionPane.showMessageDialog(this, "Invalid PIN.", "Reset scores", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            int updated = auth.resetAllUsersGameStats();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Reset stats for " + updated + " account(s).",
+                    "Reset scores",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Reset scores", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /** Shows rolling stats for the table selection (same fields as the player Statistics screen). */
