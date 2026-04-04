@@ -1,11 +1,48 @@
 package typetris.ui;
 
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.RadialGradientPaint;
+import java.awt.RenderingHints;
 import java.sql.SQLException;
 import java.util.List;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumn;
 
 import typetris.backend.AuthRepository;
 import typetris.backend.Leaderboard;
@@ -88,6 +125,8 @@ public final class UserInterface extends JFrame {
     };
 
     private final JTable parentTable = new JTable(parentModel);
+
+    private final JTable leaderboardTable = new JTable(leaderboardModel);
 
     /** Host panel for {@link GameplayPanel}; swapped on each new run. */
     private final JPanel gameplayHost = new JPanel(new BorderLayout());
@@ -188,7 +227,16 @@ public final class UserInterface extends JFrame {
             GameplayPanel gp = new GameplayPanel(auth, loggedInUser, gameTier, gameSubLevel, () -> {
             }, this::onGameplayNavigate);
             activeGameplay = gp;
-            gameplayHost.add(gp, BorderLayout.CENTER);
+            JPanel gameplayCenter = new JPanel(new GridBagLayout());
+            gameplayCenter.setOpaque(false);
+            GridBagConstraints ggc = new GridBagConstraints();
+            ggc.gridx = 0;
+            ggc.gridy = 0;
+            ggc.weightx = 1;
+            ggc.weighty = 1;
+            ggc.anchor = GridBagConstraints.CENTER;
+            gameplayCenter.add(gp, ggc);
+            gameplayHost.add(gameplayCenter, BorderLayout.CENTER);
             // gameplayHost was empty at first pack(); give it a real size so the gameplay
             // card lays out.
             Dimension gpPref = gp.getPreferredSize();
@@ -282,49 +330,33 @@ public final class UserInterface extends JFrame {
     }
 
     private void stylePrimaryButton(JButton b) {
-        b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
-        b.setBackground(TypeTrisTheme.PRIMARY_CONTAINER);
-        b.setForeground(TypeTrisTheme.ON_PRIMARY);
-        b.setFocusPainted(false);
-        b.setBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
-                        BorderFactory.createEmptyBorder(8, 16, 8, 16)));
-        b.setOpaque(true);
-        b.setContentAreaFilled(true);
-        ButtonRolloverSupport.install(b, TypeTrisTheme.PRIMARY_CONTAINER);
+        UiButtonStyles.applyPrimary(b);
     }
 
-    /**
-     * Outlined control: high contrast on dark panels (menu row buttons, Back,
-     * etc.).
-     */
     private void styleSecondaryButton(JButton b) {
-        b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
-        b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
-        b.setForeground(TypeTrisTheme.PRIMARY);
-        b.setFocusPainted(false);
-        b.setBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.PRIMARY, 2),
-                        BorderFactory.createEmptyBorder(9, 18, 9, 18)));
-        b.setOpaque(true);
-        b.setContentAreaFilled(true);
-        ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_LOW);
+        UiButtonStyles.applySecondary(b);
+    }
+
+    private void styleBackButton(JButton b) {
+        UiButtonStyles.applyBack(b);
     }
 
     private void styleMutedButton(JButton b) {
-        b.setFont(TypeTrisTheme.label(11f, Font.BOLD));
-        b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-        b.setForeground(TypeTrisTheme.ON_SURFACE);
+        UiButtonStyles.applyMuted(b);
+    }
+
+    private void styleTierLevelButton(JButton b, Color accent) {
+        b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
+        b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
+        b.setForeground(accent);
         b.setFocusPainted(false);
         b.setBorder(
                 BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.OUTLINE, 1),
-                        BorderFactory.createEmptyBorder(8, 16, 8, 16)));
+                        new LineBorder(accent, 2),
+                        BorderFactory.createEmptyBorder(9, 12, 9, 12)));
         b.setOpaque(true);
         b.setContentAreaFilled(true);
-        ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_HIGH);
+        ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_LOW);
     }
 
     /** “Create account” call-to-action on the sign-in screen. */
@@ -343,20 +375,14 @@ public final class UserInterface extends JFrame {
     }
 
     private void styleLinkButton(JButton b) {
-        b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
-        b.setForeground(TypeTrisTheme.SECONDARY);
-        b.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
-        b.setBorderPainted(false);
-        b.setContentAreaFilled(false);
-        b.setFocusPainted(false);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        UiButtonStyles.applyLink(b);
     }
 
     private void styleTextField(JTextField f) {
         styleTextField(f, false);
     }
 
-    /** @param compact tighter padding and font for login / register rows */
+    // compact=true: login / register / admin-create rows
     private void styleTextField(JTextField f, boolean compact) {
         f.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         f.setForeground(TypeTrisTheme.ON_SURFACE);
@@ -370,12 +396,52 @@ public final class UserInterface extends JFrame {
         f.setFont(TypeTrisTheme.body(compact ? 13f : 14f, Font.PLAIN));
     }
 
-    private static final int AUTH_FIELD_WIDTH = 248;
+    /** Fixed column width for sign-in / register so fields and CTAs line up. */
+    private static final int AUTH_FORM_W = 320;
+    private static final int AUTH_FIELD_H = 42;
+    private static final int AUTH_PRIMARY_BTN_H = 46;
+    private static final int AUTH_OUTLINE_BTN_H = 44;
 
     private static void sizeAuthField(JTextField f) {
         Dimension d = f.getPreferredSize();
-        f.setPreferredSize(new Dimension(AUTH_FIELD_WIDTH, d.height));
-        f.setMaximumSize(new Dimension(AUTH_FIELD_WIDTH, d.height));
+        int h = Math.max(AUTH_FIELD_H, d.height);
+        Dimension fixed = new Dimension(AUTH_FORM_W, h);
+        f.setPreferredSize(fixed);
+        f.setMinimumSize(fixed);
+        f.setMaximumSize(fixed);
+    }
+
+    /** Full-width primary CTA in the auth card (same width as fields). */
+    private static void bindAuthPrimaryButton(JButton b) {
+        Dimension d = new Dimension(AUTH_FORM_W, AUTH_PRIMARY_BTN_H);
+        b.setPreferredSize(d);
+        b.setMinimumSize(d);
+        b.setMaximumSize(d);
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
+    }
+
+    /** Full-width secondary / outline CTA matching auth column width. */
+    private static void bindAuthOutlineButton(JButton b) {
+        Dimension d = new Dimension(AUTH_FORM_W, AUTH_OUTLINE_BTN_H);
+        b.setPreferredSize(d);
+        b.setMinimumSize(d);
+        b.setMaximumSize(d);
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
+    }
+
+    /** Larger, calmer inputs for the auth screens. */
+    private void styleAuthInput(JTextField f) {
+        styleTextField(f, true);
+        f.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
+        f.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+    }
+
+    private void styleAuthFormLabel(JLabel l) {
+        l.setForeground(TypeTrisTheme.ON_SURFACE);
+        l.setFont(TypeTrisTheme.label(11f, Font.BOLD));
     }
 
     private static void addAuthFormRow(JPanel form, GridBagConstraints lc, GridBagConstraints fc, int row, JLabel label,
@@ -488,11 +554,43 @@ public final class UserInterface extends JFrame {
         c3.setPreferredWidth(188);
     }
 
+    /** Column widths for global high-score table (rank compact; username gets slack). */
+    private void configureLeaderboardTableColumns(JTable t) {
+        t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        t.getColumnModel().getColumn(0).setPreferredWidth(56);
+        t.getColumnModel().getColumn(0).setMaxWidth(72);
+        t.getColumnModel().getColumn(1).setPreferredWidth(168);
+        t.getColumnModel().getColumn(2).setPreferredWidth(104);
+        t.getColumnModel().getColumn(3).setPreferredWidth(96);
+        t.getColumnModel().getColumn(4).setPreferredWidth(120);
+        t.getColumnModel().getColumn(5).setPreferredWidth(104);
+    }
+
     private JScrollPane themedScroll(Component view) {
         JScrollPane sp = new JScrollPane(view);
         sp.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
         sp.getViewport().setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         return sp;
+    }
+
+    /**
+     * Shared shell for parent “Admin accounts” and {@link #buildLeaderboardPanel()}: headline + tool row,
+     * themed scroll table, bottom action bar.
+     */
+    private JPanel buildThemedTableScreen(String headline, JComponent topTools, JTable table, JComponent bottomBar) {
+        JPanel p = new JPanel(new BorderLayout(0, 8));
+        p.setOpaque(false);
+        JLabel head = new JLabel(headline);
+        head.setFont(TypeTrisTheme.headline(16f, Font.BOLD));
+        head.setForeground(TypeTrisTheme.PRIMARY);
+        JPanel top = new JPanel(new BorderLayout(0, 8));
+        top.setOpaque(false);
+        top.add(head, BorderLayout.NORTH);
+        top.add(topTools, BorderLayout.SOUTH);
+        p.add(top, BorderLayout.NORTH);
+        p.add(themedScroll(table), BorderLayout.CENTER);
+        p.add(bottomBar, BorderLayout.SOUTH);
+        return themedCard(p);
     }
 
     // main menu for guest
@@ -583,43 +681,26 @@ public final class UserInterface extends JFrame {
 
     private JPanel buildAuthPanel() {
         authModePanel = new JPanel(new CardLayout());
-        authModePanel.setOpaque(false);
+        authModePanel.setOpaque(true);
+        authModePanel.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
 
         JTextField loginUser = new JTextField();
         JPasswordField loginPass = new JPasswordField();
-        styleTextField(loginUser, true);
-        styleTextField(loginPass, true);
+        styleAuthInput(loginUser);
+        styleAuthInput(loginPass);
         sizeAuthField(loginUser);
         sizeAuthField(loginPass);
 
         JLabel lu = new JLabel("Username");
-        styleFormLabel(lu);
+        styleAuthFormLabel(lu);
         JLabel lp = new JLabel("Password");
-        styleFormLabel(lp);
+        styleAuthFormLabel(lp);
 
-        JPanel loginForm = new JPanel(new GridBagLayout());
-        loginForm.setOpaque(false);
-        GridBagConstraints lc = new GridBagConstraints();
-        lc.insets = new Insets(6, 0, 6, 10);
-        lc.anchor = GridBagConstraints.LINE_END;
-        lc.gridx = 0;
-        lc.fill = GridBagConstraints.NONE;
-        lc.weightx = 0;
-        GridBagConstraints fc = new GridBagConstraints();
-        fc.insets = new Insets(6, 0, 6, 0);
-        fc.anchor = GridBagConstraints.LINE_START;
-        fc.gridx = 1;
-        fc.fill = GridBagConstraints.NONE;
-        fc.weightx = 0;
-        addAuthFormRow(loginForm, lc, fc, 0, lu, loginUser);
-        addAuthFormRow(loginForm, lc, fc, 1, lp, loginPass);
-
-        JPanel loginButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        loginButtons.setOpaque(false);
-        JButton loginOk = new JButton("Login");
+        JButton loginOk = new JButton("Sign in");
         JButton loginBack = new JButton("Back");
         stylePrimaryButton(loginOk);
-        styleSecondaryButton(loginBack);
+        styleBackButton(loginBack);
+        bindAuthPrimaryButton(loginOk);
         loginOk.addActionListener(e -> {
             String u = loginUser.getText().trim();
             String p = new String(loginPass.getPassword());
@@ -644,87 +725,141 @@ public final class UserInterface extends JFrame {
             }
         });
         loginBack.addActionListener(e -> showCard(CARD_MENU));
-        loginButtons.add(loginBack);
-        loginButtons.add(loginOk);
 
-        JPanel loginFormHost = new JPanel(new BorderLayout());
-        loginFormHost.setOpaque(false);
-        loginFormHost.add(loginForm, BorderLayout.NORTH);
-
-        JLabel noAccountHint = new JLabel("Don't have an account yet?");
-        noAccountHint.setFont(TypeTrisTheme.label(11f, Font.PLAIN));
+        JLabel noAccountHint = new JLabel("New to TYPE-TRIS?", SwingConstants.CENTER);
+        noAccountHint.setFont(TypeTrisTheme.label(11f, Font.BOLD));
         noAccountHint.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
         noAccountHint.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JButton createAccountBtn = new JButton("Create account");
+        JButton createAccountBtn = new JButton("Create an account");
         styleCreateAccountButton(createAccountBtn);
-        createAccountBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        createAccountBtn.setMaximumSize(new Dimension(300, 46));
+        bindAuthOutlineButton(createAccountBtn);
         createAccountBtn.addActionListener(
                 e -> ((CardLayout) authModePanel.getLayout()).show(authModePanel, AUTH_VIEW_REGISTER));
 
-        JPanel loginCenter = new JPanel();
-        loginCenter.setLayout(new javax.swing.BoxLayout(loginCenter, javax.swing.BoxLayout.Y_AXIS));
-        loginCenter.setOpaque(false);
-        loginCenter.add(loginFormHost);
-        loginCenter.add(javax.swing.Box.createVerticalStrut(20));
-        loginCenter.add(noAccountHint);
-        loginCenter.add(javax.swing.Box.createVerticalStrut(10));
-        loginCenter.add(createAccountBtn);
+        JLabel brand = new JLabel("TYPE-TRIS", SwingConstants.CENTER);
+        brand.setFont(TypeTrisTheme.headline(26f, Font.BOLD));
+        brand.setForeground(TypeTrisTheme.PRIMARY);
 
-        JPanel loginTab = new JPanel(new BorderLayout(0, 12));
+        JPanel westDock = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        westDock.setOpaque(false);
+        westDock.add(loginBack);
+        int headerBarH = Math.max(44, westDock.getPreferredSize().height);
+        int sideDockW = Math.max(112, westDock.getPreferredSize().width + 16);
+        westDock.setPreferredSize(new Dimension(sideDockW, headerBarH));
+        westDock.setMinimumSize(new Dimension(sideDockW, headerBarH));
+
+        JPanel eastDock = new JPanel();
+        eastDock.setOpaque(false);
+        eastDock.setPreferredSize(new Dimension(sideDockW, headerBarH));
+        eastDock.setMinimumSize(new Dimension(sideDockW, headerBarH));
+
+        JPanel header = new JPanel(new BorderLayout(0, 0));
+        header.setOpaque(false);
+        header.add(westDock, BorderLayout.WEST);
+        header.add(brand, BorderLayout.CENTER);
+        header.add(eastDock, BorderLayout.EAST);
+
+        JPanel formCol = new JPanel();
+        formCol.setLayout(new BoxLayout(formCol, BoxLayout.Y_AXIS));
+        formCol.setOpaque(false);
+        formCol.setMaximumSize(new Dimension(AUTH_FORM_W, Integer.MAX_VALUE));
+        formCol.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel signInHead = new JLabel("Sign in", SwingConstants.CENTER);
+        signInHead.setFont(TypeTrisTheme.headline(20f, Font.BOLD));
+        signInHead.setForeground(TypeTrisTheme.PRIMARY);
+        signInHead.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        formCol.add(signInHead);
+        formCol.add(Box.createVerticalStrut(20));
+
+        lu.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formCol.add(lu);
+        formCol.add(Box.createVerticalStrut(6));
+        loginUser.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formCol.add(loginUser);
+        formCol.add(Box.createVerticalStrut(14));
+        lp.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formCol.add(lp);
+        formCol.add(Box.createVerticalStrut(6));
+        loginPass.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formCol.add(loginPass);
+        formCol.add(Box.createVerticalStrut(22));
+        formCol.add(loginOk);
+
+        JSeparator signUpRule = new JSeparator(SwingConstants.HORIZONTAL);
+        signUpRule.setForeground(TypeTrisTheme.OUTLINE_VARIANT);
+        signUpRule.setMaximumSize(new Dimension(AUTH_FORM_W, signUpRule.getPreferredSize().height));
+        signUpRule.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        formCol.add(Box.createVerticalStrut(22));
+        formCol.add(signUpRule);
+        formCol.add(Box.createVerticalStrut(18));
+        formCol.add(noAccountHint);
+        formCol.add(Box.createVerticalStrut(10));
+        formCol.add(createAccountBtn);
+
+        JPanel cardPad = new JPanel();
+        cardPad.setLayout(new BoxLayout(cardPad, BoxLayout.X_AXIS));
+        cardPad.setOpaque(false);
+        cardPad.add(Box.createHorizontalGlue());
+        cardPad.add(formCol);
+        cardPad.add(Box.createHorizontalGlue());
+
+        JPanel authCard = new JPanel(new BorderLayout(0, 0));
+        authCard.setOpaque(true);
+        authCard.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
+        authCard.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(28, 36, 32, 36)));
+        authCard.add(cardPad, BorderLayout.CENTER);
+
+        JPanel loginCenter = new JPanel(new GridBagLayout());
+        loginCenter.setOpaque(false);
+        GridBagConstraints lg = new GridBagConstraints();
+        lg.gridx = 0;
+        lg.gridy = 0;
+        lg.weightx = 1;
+        lg.weighty = 1;
+        lg.anchor = GridBagConstraints.CENTER;
+        lg.insets = new Insets(16, 0, 40, 0);
+        loginCenter.add(authCard, lg);
+
+        JPanel loginTab = new JPanel(new BorderLayout(0, 0));
         loginTab.setOpaque(false);
+        loginTab.setBorder(new EmptyBorder(12, 16, 20, 16));
+        loginTab.add(header, BorderLayout.NORTH);
         loginTab.add(loginCenter, BorderLayout.CENTER);
-        loginTab.add(loginButtons, BorderLayout.SOUTH);
-        loginTab.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         JTextField email = new JTextField();
         JTextField regUser = new JTextField();
         JPasswordField regPass = new JPasswordField();
         JPasswordField regConfirm = new JPasswordField();
-        styleTextField(email, true);
-        styleTextField(regUser, true);
-        styleTextField(regPass, true);
-        styleTextField(regConfirm, true);
+        styleAuthInput(email);
+        styleAuthInput(regUser);
+        styleAuthInput(regPass);
+        styleAuthInput(regConfirm);
         sizeAuthField(email);
         sizeAuthField(regUser);
         sizeAuthField(regPass);
         sizeAuthField(regConfirm);
 
         JLabel e1 = new JLabel("Email");
-        styleFormLabel(e1);
+        styleAuthFormLabel(e1);
         JLabel u1 = new JLabel("Username");
-        styleFormLabel(u1);
-        JLabel p1 = new JLabel("Password (min 8)");
-        styleFormLabel(p1);
+        styleAuthFormLabel(u1);
+        JLabel p1 = new JLabel("Password (min 8 characters)");
+        styleAuthFormLabel(p1);
         JLabel c1 = new JLabel("Confirm password");
-        styleFormLabel(c1);
+        styleAuthFormLabel(c1);
 
-        JPanel regForm = new JPanel(new GridBagLayout());
-        regForm.setOpaque(false);
-        GridBagConstraints rlc = new GridBagConstraints();
-        rlc.insets = new Insets(5, 0, 5, 10);
-        rlc.anchor = GridBagConstraints.LINE_END;
-        rlc.gridx = 0;
-        rlc.fill = GridBagConstraints.NONE;
-        rlc.weightx = 0;
-        GridBagConstraints rfc = new GridBagConstraints();
-        rfc.insets = new Insets(5, 0, 5, 0);
-        rfc.anchor = GridBagConstraints.LINE_START;
-        rfc.gridx = 1;
-        rfc.fill = GridBagConstraints.NONE;
-        rfc.weightx = 0;
-        addAuthFormRow(regForm, rlc, rfc, 0, e1, email);
-        addAuthFormRow(regForm, rlc, rfc, 1, u1, regUser);
-        addAuthFormRow(regForm, rlc, rfc, 2, p1, regPass);
-        addAuthFormRow(regForm, rlc, rfc, 3, c1, regConfirm);
-
-        JPanel regButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        regButtons.setOpaque(false);
         JButton regOk = new JButton("Create account");
         JButton regBack = new JButton("Back");
         stylePrimaryButton(regOk);
-        styleSecondaryButton(regBack);
+        styleBackButton(regBack);
+        bindAuthPrimaryButton(regOk);
         regOk.addActionListener(e -> {
             String em = email.getText().trim();
             String u = regUser.getText().trim();
@@ -775,38 +910,107 @@ public final class UserInterface extends JFrame {
             }
         });
         regBack.addActionListener(e -> showCard(CARD_MENU));
-        regButtons.add(regBack);
-        regButtons.add(regOk);
 
-        JPanel regHeader = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        regHeader.setOpaque(false);
         JButton backToSignIn = new JButton("Already have an account? Sign in");
         styleLinkButton(backToSignIn);
         backToSignIn.addActionListener(
                 e -> ((CardLayout) authModePanel.getLayout()).show(authModePanel, AUTH_VIEW_SIGNIN));
-        regHeader.add(backToSignIn);
+        backToSignIn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel registerTab = new JPanel(new BorderLayout(0, 12));
+        JLabel regBrand = new JLabel("TYPE-TRIS", SwingConstants.CENTER);
+        regBrand.setFont(TypeTrisTheme.headline(26f, Font.BOLD));
+        regBrand.setForeground(TypeTrisTheme.PRIMARY);
+
+        JPanel regHeader = new JPanel(new BorderLayout(16, 0));
+        regHeader.setOpaque(false);
+        regHeader.add(regBack, BorderLayout.WEST);
+        regHeader.add(regBrand, BorderLayout.CENTER);
+
+        JPanel regCol = new JPanel();
+        regCol.setLayout(new BoxLayout(regCol, BoxLayout.Y_AXIS));
+        regCol.setOpaque(false);
+        regCol.setMaximumSize(new Dimension(AUTH_FORM_W, Integer.MAX_VALUE));
+        regCol.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel regHead = new JLabel("Create account", SwingConstants.CENTER);
+        regHead.setFont(TypeTrisTheme.headline(20f, Font.BOLD));
+        regHead.setForeground(TypeTrisTheme.PRIMARY);
+        regHead.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel regSub = new JLabel("Pick a username and a strong password.", SwingConstants.CENTER);
+        regSub.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        regSub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        regSub.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        regCol.add(regHead);
+        regCol.add(Box.createVerticalStrut(6));
+        regCol.add(regSub);
+        regCol.add(Box.createVerticalStrut(20));
+
+        e1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(e1);
+        regCol.add(Box.createVerticalStrut(6));
+        email.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(email);
+        regCol.add(Box.createVerticalStrut(12));
+        u1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(u1);
+        regCol.add(Box.createVerticalStrut(6));
+        regUser.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(regUser);
+        regCol.add(Box.createVerticalStrut(12));
+        p1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(p1);
+        regCol.add(Box.createVerticalStrut(6));
+        regPass.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(regPass);
+        regCol.add(Box.createVerticalStrut(12));
+        c1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(c1);
+        regCol.add(Box.createVerticalStrut(6));
+        regConfirm.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regCol.add(regConfirm);
+        regCol.add(Box.createVerticalStrut(22));
+        regCol.add(regOk);
+        regCol.add(Box.createVerticalStrut(18));
+        regCol.add(backToSignIn);
+
+        JPanel regCardPad = new JPanel();
+        regCardPad.setLayout(new BoxLayout(regCardPad, BoxLayout.X_AXIS));
+        regCardPad.setOpaque(false);
+        regCardPad.add(Box.createHorizontalGlue());
+        regCardPad.add(regCol);
+        regCardPad.add(Box.createHorizontalGlue());
+
+        JPanel regCard = new JPanel(new BorderLayout(0, 0));
+        regCard.setOpaque(true);
+        regCard.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
+        regCard.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(28, 36, 32, 36)));
+        regCard.add(regCardPad, BorderLayout.CENTER);
+
+        JPanel regCenter = new JPanel(new GridBagLayout());
+        regCenter.setOpaque(false);
+        GridBagConstraints rg = new GridBagConstraints();
+        rg.gridx = 0;
+        rg.gridy = 0;
+        rg.weightx = 1;
+        rg.weighty = 1;
+        rg.anchor = GridBagConstraints.NORTH;
+        rg.insets = new Insets(4, 0, 32, 0);
+        regCenter.add(regCard, rg);
+
+        JPanel registerTab = new JPanel(new BorderLayout(0, 0));
         registerTab.setOpaque(false);
-        JPanel regFormHost = new JPanel(new BorderLayout());
-        regFormHost.setOpaque(false);
-        regFormHost.add(regForm, BorderLayout.NORTH);
+        registerTab.setBorder(new EmptyBorder(12, 16, 20, 16));
         registerTab.add(regHeader, BorderLayout.NORTH);
-        registerTab.add(regFormHost, BorderLayout.CENTER);
-        registerTab.add(regButtons, BorderLayout.SOUTH);
-        registerTab.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        registerTab.add(regCenter, BorderLayout.CENTER);
 
         authModePanel.add(loginTab, AUTH_VIEW_SIGNIN);
         authModePanel.add(registerTab, AUTH_VIEW_REGISTER);
 
-        JPanel shell = new JPanel(new BorderLayout(0, 12));
-        shell.setOpaque(false);
-        JLabel head = new JLabel("PLAY");
-        head.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
-        head.setForeground(TypeTrisTheme.PRIMARY);
-        shell.add(head, BorderLayout.NORTH);
-        shell.add(authModePanel, BorderLayout.CENTER);
-        return themedCard(shell);
+        return themedCard(authModePanel);
     }
 
     // post-login
@@ -909,7 +1113,8 @@ public final class UserInterface extends JFrame {
         }
     }
 
-    private void refreshLeaderboard() {
+    /** @return {@code true} if rows were loaded without error */
+    private boolean refreshLeaderboard() {
         leaderboardModel.setRowCount(0);
         try {
             Leaderboard board = new Leaderboard(auth);
@@ -925,8 +1130,10 @@ public final class UserInterface extends JFrame {
                         pl.gamesPlayed()
                 });
             }
+            return true;
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Leaderboard", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
@@ -962,7 +1169,7 @@ public final class UserInterface extends JFrame {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttons.setOpaque(false);
         JButton back = new JButton("Back");
-        styleSecondaryButton(back);
+        styleBackButton(back);
         back.addActionListener(e -> {
             if (loggedInUser != null) {
                 goPlayerMenu();
@@ -988,12 +1195,42 @@ public final class UserInterface extends JFrame {
     }
 
     private JPanel buildLeaderboardPanel() {
-        JTable table = new JTable(leaderboardModel);
-        styleDataTable(table);
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttons.setOpaque(false);
+        JButton refresh = new JButton("Refresh list");
+        styleSecondaryButton(refresh);
+        JLabel refreshHint = new JLabel(" ");
+        refreshHint.setFont(TypeTrisTheme.label(10f, Font.PLAIN));
+        refreshHint.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        refresh.addActionListener(e -> {
+            if (refreshLeaderboard()) {
+                int n = leaderboardModel.getRowCount();
+                refreshHint.setText(
+                        n == 0 ? "No scores yet."
+                                : n == 1 ? "Loaded 1 player."
+                                        : "Loaded " + n + " players.");
+                Timer clear = new Timer(3500, ev -> refreshHint.setText(" "));
+                clear.setRepeats(false);
+                clear.start();
+            }
+        });
+
+        JPanel toolsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        toolsLeft.setOpaque(false);
+        toolsLeft.add(refresh);
+        toolsLeft.add(Box.createHorizontalStrut(12));
+        toolsLeft.add(refreshHint);
+        JPanel toolsRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        toolsRight.setOpaque(false);
+        JPanel tools = new JPanel(new BorderLayout(12, 0));
+        tools.setOpaque(false);
+        tools.add(toolsLeft, BorderLayout.WEST);
+        tools.add(toolsRight, BorderLayout.EAST);
+
+        JPanel bottomLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        bottomLeft.setOpaque(false);
+        JPanel bottomRight = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomRight.setOpaque(false);
         JButton back = new JButton("Back");
-        styleSecondaryButton(back);
+        styleBackButton(back);
         back.addActionListener(e -> {
             if (loggedInUser != null) {
                 goPlayerMenu();
@@ -1001,21 +1238,16 @@ public final class UserInterface extends JFrame {
                 showCard(CARD_MENU);
             }
         });
-        JButton refresh = new JButton("Refresh");
-        stylePrimaryButton(refresh);
-        refresh.addActionListener(e -> refreshLeaderboard());
-        buttons.add(refresh);
-        buttons.add(back);
+        bottomRight.add(back);
+        JPanel bottom = new JPanel(new BorderLayout(12, 0));
+        bottom.setOpaque(false);
+        bottom.add(bottomLeft, BorderLayout.WEST);
+        bottom.add(bottomRight, BorderLayout.EAST);
 
-        JPanel p = new JPanel(new BorderLayout(0, 12));
-        p.setOpaque(false);
-        JLabel head = new JLabel("LEADERBOARD");
-        head.setFont(TypeTrisTheme.headline(18f, Font.BOLD));
-        head.setForeground(TypeTrisTheme.PRIMARY);
-        p.add(head, BorderLayout.NORTH);
-        p.add(themedScroll(table), BorderLayout.CENTER);
-        p.add(buttons, BorderLayout.SOUTH);
-        return themedCard(p);
+        styleAdminAccountsTable(leaderboardTable);
+        configureLeaderboardTableColumns(leaderboardTable);
+
+        return buildThemedTableScreen("LEADERBOARD", tools, leaderboardTable, bottom);
     }
 
     // send help text
@@ -1043,7 +1275,7 @@ public final class UserInterface extends JFrame {
         JButton ok = new JButton("Unlock");
         JButton back = new JButton("Back");
         stylePrimaryButton(ok);
-        styleSecondaryButton(back);
+        styleBackButton(back);
         ok.addActionListener(e -> {
             String p = new String(pin.getPassword());
             if (!ADMIN_PIN.equals(p)) {
@@ -1141,7 +1373,7 @@ public final class UserInterface extends JFrame {
         JPanel bottomRight = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomRight.setOpaque(false);
         JButton back = new JButton("Back");
-        styleSecondaryButton(back);
+        styleBackButton(back);
         back.addActionListener(e -> showCard(CARD_PARENT));
         bottomRight.add(back);
 
@@ -1153,19 +1385,7 @@ public final class UserInterface extends JFrame {
         styleAdminAccountsTable(parentTable);
         configureParentAccountsTableColumns(parentTable);
 
-        JPanel p = new JPanel(new BorderLayout(0, 8));
-        p.setOpaque(false);
-        JLabel head = new JLabel("ADMIN ACCOUNTS");
-        head.setFont(TypeTrisTheme.headline(16f, Font.BOLD));
-        head.setForeground(TypeTrisTheme.PRIMARY);
-        JPanel top = new JPanel(new BorderLayout(0, 8));
-        top.setOpaque(false);
-        top.add(head, BorderLayout.NORTH);
-        top.add(tools, BorderLayout.SOUTH);
-        p.add(top, BorderLayout.NORTH);
-        p.add(themedScroll(parentTable), BorderLayout.CENTER);
-        p.add(bottom, BorderLayout.SOUTH);
-        return themedCard(p);
+        return buildThemedTableScreen("ADMIN ACCOUNTS", tools, parentTable, bottom);
     }
 
     /** Admin-only: create a user from a dialog; stays on the accounts screen. */
@@ -1291,10 +1511,17 @@ public final class UserInterface extends JFrame {
             return;
         }
         try {
-            int updated = auth.resetAllUsersGameStats();
+            int accounts = auth.resetAllUsersGameStats();
+            ClientPrefs.clearLocalScoreAndUnlockData();
+            refreshLeaderboard();
+            refreshDifficultyLocks();
+            if (loggedInUser != null) {
+                refreshStats();
+            }
             JOptionPane.showMessageDialog(
                     this,
-                    "Reset stats for " + updated + " account(s).",
+                    "Database stats cleared for " + accounts + " account(s). "
+                            + "Local cached bests and unlocks were cleared on this machine.",
                     "Reset scores",
                     JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException e) {
@@ -1412,114 +1639,196 @@ public final class UserInterface extends JFrame {
     // difficulty + game over (real gameplay session)
 
     private JPanel buildDifficultyPanel() {
-        JPanel outer = new JPanel(new BorderLayout(0, 16));
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel shell = new JPanel(new BorderLayout(0, 16));
+        shell.setOpaque(false);
+
+        JPanel backRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        backRow.setOpaque(false);
         JButton back = new JButton("Back");
-        styleSecondaryButton(back);
+        styleBackButton(back);
         back.addActionListener(e -> goPlayerMenu());
-        top.add(back);
-        outer.add(top, BorderLayout.NORTH);
+        backRow.add(back);
+        shell.add(backRow, BorderLayout.NORTH);
 
-        JPanel centerWrap = new JPanel(new BorderLayout(8, 16));
-        JLabel heading = new JLabel("SELECT GAME LEVEL");
-        heading.setFont(TypeTrisTheme.label(12f, Font.BOLD));
-        heading.setForeground(TypeTrisTheme.SECONDARY);
-        heading.setHorizontalAlignment(JLabel.CENTER);
-        centerWrap.add(heading, BorderLayout.NORTH);
-        JPanel tiers = new JPanel(new GridLayout(1, 3, 16, 0));
-        tiers.setOpaque(false);
-        tiers.add(buildTierColumn("easy", "EASY", TypeTrisTheme.PRIMARY, 0));
-        tiers.add(buildTierColumn("medium", "MEDIUM", TypeTrisTheme.YELLOW_MEDIUM, 1));
-        tiers.add(buildTierColumn("hard", "HARD", TypeTrisTheme.SECONDARY, 2));
-        centerWrap.add(tiers, BorderLayout.CENTER);
-        outer.add(centerWrap, BorderLayout.CENTER);
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
 
-        return themedCard(outer);
-    }
+        JLabel headTitle = new JLabel("SELECT LEVEL");
+        headTitle.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
+        headTitle.setForeground(TypeTrisTheme.PRIMARY);
+        headTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        body.add(headTitle);
+        body.add(Box.createVerticalStrut(8));
 
-    private JPanel buildTierColumn(String tierKey, String title, Color titleColor, int tierIndex) {
-        JPanel col = new JPanel();
-        col.setLayout(new javax.swing.BoxLayout(col, javax.swing.BoxLayout.Y_AXIS));
-        col.setOpaque(true);
-        col.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-        col.setBorder(BorderFactory.createLineBorder(TypeTrisTheme.OUTLINE_VARIANT));
-        JLabel h = new JLabel(title);
-        h.setFont(TypeTrisTheme.headline(18f, Font.BOLD));
-        h.setForeground(titleColor);
-        h.setAlignmentX(CENTER_ALIGNMENT);
-        col.add(javax.swing.Box.createVerticalStrut(8));
-        col.add(h);
-        col.add(javax.swing.Box.createVerticalStrut(16));
+        JLabel sub = new JLabel("Faster drops and longer words as you go right and down.");
+        sub.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        sub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        sub.setAlignmentX(Component.CENTER_ALIGNMENT);
+        body.add(sub);
+        body.add(Box.createVerticalStrut(24));
+
+        String[] tierKeys = { "easy", "medium", "hard" };
+        String[] tierTitles = { "Easy", "Medium", "Hard" };
+        Color[] tierAccents = { TypeTrisTheme.PRIMARY, TypeTrisTheme.YELLOW_MEDIUM, TypeTrisTheme.SECONDARY };
+
+        JPanel gridCard = new JPanel(new GridBagLayout());
+        gridCard.setOpaque(true);
+        gridCard.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        gridCard.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        BorderFactory.createEmptyBorder(22, 32, 26, 32)));
+
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.anchor = GridBagConstraints.LINE_END;
+        gc.insets = new Insets(4, 10, 16, 10);
+        gc.weightx = 0;
+        gridCard.add(new JLabel(""), gc);
+
         for (int lv = 1; lv <= 3; lv++) {
-            int level = lv;
-            JButton b = new JButton("Level " + level);
-            b.setAlignmentX(CENTER_ALIGNMENT);
-            styleSecondaryButton(b);
-            b.addActionListener(e -> startGameAt(tierKey, level));
-            diffButtons[tierIndex][lv - 1] = b;
-            col.add(b);
-            col.add(javax.swing.Box.createVerticalStrut(8));
+            gc.gridx = lv;
+            gc.anchor = GridBagConstraints.CENTER;
+            JLabel colHead = new JLabel("Stage " + lv);
+            colHead.setFont(TypeTrisTheme.label(10f, Font.BOLD));
+            colHead.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+            gridCard.add(colHead, gc);
         }
-        col.add(javax.swing.Box.createVerticalGlue());
-        return col;
+
+        Dimension levelBtnSize = new Dimension(108, 46);
+
+        for (int t = 0; t < 3; t++) {
+            gc.gridy = t + 1;
+            gc.gridx = 0;
+            gc.anchor = GridBagConstraints.LINE_END;
+            gc.fill = GridBagConstraints.NONE;
+            gc.weightx = 0;
+            gc.insets = new Insets(20, 10, 20, 10);
+            JLabel tierLab = new JLabel(tierTitles[t]);
+            tierLab.setFont(TypeTrisTheme.headline(15f, Font.BOLD));
+            tierLab.setForeground(tierAccents[t]);
+            gridCard.add(tierLab, gc);
+
+            String tierKey = tierKeys[t];
+            Color accent = tierAccents[t];
+            for (int lv = 1; lv <= 3; lv++) {
+                gc.gridx = lv;
+                gc.anchor = GridBagConstraints.CENTER;
+                gc.fill = GridBagConstraints.HORIZONTAL;
+                gc.weightx = 1;
+                int level = lv;
+                JButton b = new JButton("Level " + level);
+                b.setPreferredSize(levelBtnSize);
+                b.setMinimumSize(levelBtnSize);
+                styleTierLevelButton(b, accent);
+                b.setToolTipText(tierTitles[t] + " tier · stage " + level);
+                b.addActionListener(e -> startGameAt(tierKey, level));
+                diffButtons[t][lv - 1] = b;
+                gridCard.add(b, gc);
+            }
+        }
+
+        JPanel gridWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        gridWrap.setOpaque(false);
+        gridWrap.setAlignmentX(Component.CENTER_ALIGNMENT);
+        gridWrap.add(gridCard);
+
+        body.add(gridWrap);
+        body.add(Box.createVerticalGlue());
+
+        shell.add(body, BorderLayout.CENTER);
+
+        return themedCard(shell);
     }
 
     private JPanel buildGameOverPanel() {
-        JPanel c = new JPanel();
-        c.setLayout(new javax.swing.BoxLayout(c, javax.swing.BoxLayout.Y_AXIS));
+        JPanel outer = new JPanel(new GridBagLayout());
+        outer.setOpaque(false);
+        GridBagConstraints og = new GridBagConstraints();
+        og.gridx = 0;
+        og.gridy = 0;
+        og.weightx = 1;
+        og.weighty = 1;
+        og.anchor = GridBagConstraints.CENTER;
+
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setOpaque(true);
+        card.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        card.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.PRIMARY, 2),
+                        BorderFactory.createEmptyBorder(32, 52, 36, 52)));
+
+        JLabel kicker = new JLabel("RUN ENDED");
+        kicker.setFont(TypeTrisTheme.label(11f, Font.BOLD));
+        kicker.setForeground(TypeTrisTheme.SECONDARY);
+        kicker.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(kicker);
+        card.add(Box.createVerticalStrut(10));
 
         JLabel title = new JLabel("GAME OVER");
-        title.setFont(TypeTrisTheme.headline(28f, Font.BOLD));
+        title.setFont(TypeTrisTheme.headline(30f, Font.BOLD));
         title.setForeground(TypeTrisTheme.ON_SURFACE);
-        title.setAlignmentX(CENTER_ALIGNMENT);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(title);
+        card.add(Box.createVerticalStrut(8));
 
-        JLabel sub = new JLabel("YOUR FINAL SCORE");
+        String tierPretty =
+                gameTier.isEmpty()
+                        ? ""
+                        : gameTier.substring(0, 1).toUpperCase() + gameTier.substring(1).toLowerCase();
+        JLabel runCtx = new JLabel(tierPretty + " · Stage " + gameSubLevel);
+        runCtx.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        runCtx.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        runCtx.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(runCtx);
+        card.add(Box.createVerticalStrut(22));
+
+        JLabel sub = new JLabel("FINAL SCORE");
         sub.setFont(TypeTrisTheme.label(10f, Font.BOLD));
         sub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        sub.setAlignmentX(CENTER_ALIGNMENT);
+        sub.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(sub);
+        card.add(Box.createVerticalStrut(6));
 
-        gameOverScore.setFont(TypeTrisTheme.headline(36f, Font.BOLD));
+        gameOverScore.setFont(TypeTrisTheme.headline(42f, Font.BOLD));
         gameOverScore.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
-        gameOverScore.setAlignmentX(CENTER_ALIGNMENT);
+        gameOverScore.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(gameOverScore);
+        card.add(Box.createVerticalStrut(16));
 
-        JLabel progressSaved = new JLabel("Your progress has been saved");
-        progressSaved.setFont(TypeTrisTheme.label(12f, Font.PLAIN));
+        JLabel progressSaved = new JLabel("Stats and unlocks are saved to your account.");
+        progressSaved.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
         progressSaved.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        progressSaved.setAlignmentX(CENTER_ALIGNMENT);
+        progressSaved.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(progressSaved);
+        card.add(Box.createVerticalStrut(28));
 
-        JButton restart = new JButton("Restart level");
-        restart.setAlignmentX(CENTER_ALIGNMENT);
-        restart.setMaximumSize(new Dimension(320, 44));
+        JButton restart = new JButton("Restart this level");
+        restart.setAlignmentX(Component.CENTER_ALIGNMENT);
+        restart.setMaximumSize(new Dimension(300, 48));
         stylePrimaryButton(restart);
         restart.addActionListener(e -> mountGameplay());
 
         JButton exit = new JButton("Exit to player menu");
-        exit.setAlignmentX(CENTER_ALIGNMENT);
-        exit.setMaximumSize(new Dimension(320, 40));
+        exit.setAlignmentX(Component.CENTER_ALIGNMENT);
+        exit.setMaximumSize(new Dimension(300, 44));
         styleSecondaryButton(exit);
-        exit.addActionListener(e -> {
-            teardownGameplay();
-            goPlayerMenu();
-        });
+        exit.addActionListener(
+                e -> {
+                    teardownGameplay();
+                    goPlayerMenu();
+                });
 
-        c.add(javax.swing.Box.createVerticalStrut(24));
-        c.add(title);
-        c.add(javax.swing.Box.createVerticalStrut(16));
-        c.add(sub);
-        c.add(javax.swing.Box.createVerticalStrut(8));
-        c.add(gameOverScore);
-        c.add(javax.swing.Box.createVerticalStrut(12));
-        c.add(progressSaved);
-        c.add(javax.swing.Box.createVerticalStrut(20));
-        c.add(restart);
-        c.add(javax.swing.Box.createVerticalStrut(12));
-        c.add(exit);
-        c.add(javax.swing.Box.createVerticalGlue());
+        card.add(restart);
+        card.add(Box.createVerticalStrut(12));
+        card.add(exit);
 
-        JPanel wrap = new JPanel(new BorderLayout());
-        wrap.setOpaque(false);
-        wrap.add(c, BorderLayout.CENTER);
-        return themedCard(wrap);
+        outer.add(card, og);
+        return themedCard(outer);
     }
 
     /**

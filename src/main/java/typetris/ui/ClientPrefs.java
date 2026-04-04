@@ -1,5 +1,6 @@
 package typetris.ui;
 
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
@@ -77,6 +78,22 @@ public final class ClientPrefs {
         int cur = prefs().getInt(k, 0);
         if (score > cur) {
             prefs().putInt(k, score);
+        }
+    }
+
+    /**
+     * Removes per-user cached bests and tier unlock progress (used after admin global stats reset).
+     */
+    public static void clearLocalScoreAndUnlockData() {
+        try {
+            Preferences p = prefs();
+            for (String k : p.keys()) {
+                if (k.startsWith("bestScore.") || k.startsWith("tierMax.")) {
+                    p.remove(k);
+                }
+            }
+            p.flush();
+        } catch (BackingStoreException ignored) {
         }
     }
 }
