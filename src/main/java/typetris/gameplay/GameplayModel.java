@@ -120,7 +120,7 @@ public final class GameplayModel {
     /** Immutable letter stored in the grid after a piece locks. */
     public record LockedCell(char ch) {}
 
-    // --- Runtime state ---
+    // runtime score
 
     private final Listener listener;
     private final Params params;
@@ -145,6 +145,10 @@ public final class GameplayModel {
     private double fallAccum;
     private Piece piece;
 
+    /**
+     * Prepares parameters and listener wiring only. Call {@link #startRound()} after the view holds
+     * {@code this} so listener methods never run while the UI field is still {@code null}.
+     */
     public GameplayModel(String tier, int subLevel, int bestFromPrefs, Listener listener) {
         this.tier = tier == null ? "easy" : tier;
         this.subLevel = Math.max(1, Math.min(3, subLevel));
@@ -152,6 +156,15 @@ public final class GameplayModel {
         this.best = bestFromPrefs;
         this.listener = listener;
         this.typingClockLastWallMs = nowMs();
+        // Do not call spawnPiece / fireHud here: Swing view assigns "model = new GameplayModel(...)"
+        // and listener callbacks must run only after that assignment completes.
+    }
+
+    /** First spawn + HUD; call once after the UI holds a reference to this model. */
+    public void startRound() {
+        if (over) {
+            return;
+        }
         spawnPiece();
         fireHud();
     }
@@ -260,7 +273,7 @@ public final class GameplayModel {
         typingClockLastWallMs = now;
     }
 
-    // --- Simulation step (gravity) ---
+    // simulation step which effects the gravity and falling of the pieces
 
     public void tick(double dt) {
         updateTypingClock();
@@ -290,7 +303,7 @@ public final class GameplayModel {
         return Math.min(5, 1 + s / 2);
     }
 
-    // --- Typing phase (word must be complete before movement keys apply) ---
+    // typing phase (word must be complete before movement keys apply)
 
     public void onTypingFieldChanged(String rawUppercase) {
         updateTypingClock();
@@ -332,7 +345,7 @@ public final class GameplayModel {
         listener.onRepaint();
     }
 
-    // --- Unlocked piece: move / rotate / soft drop ---
+    // unlocked piece: move / rotate / soft drop
 
     public void onArrowLeft() {
         tryMove(-1);
