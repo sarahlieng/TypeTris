@@ -24,8 +24,10 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 
 /**
- * Eight-step HOW TO PLAY flow matching the web {@code instructions/instructions*.html} tutorials
- * (labels, titles, and body copy), adapted for the desktop client (controls, scoring).
+ * Eight-step HOW TO PLAY flow matching the web
+ * {@code instructions/instructions*.html} tutorials
+ * (labels, titles, and body copy), adapted for the desktop client (controls,
+ * scoring).
  */
 final class InstructionsScreens {
 
@@ -41,7 +43,10 @@ final class InstructionsScreens {
     private InstructionsScreens() {
     }
 
-    /** BoxLayout stretches children oddly without a bounded max height; keep full width. */
+    /**
+     * BoxLayout stretches children oddly without a bounded max height; keep full
+     * width.
+     */
     private static void bindFullWidth(JComponent c) {
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
         Dimension d = c.getPreferredSize();
@@ -121,7 +126,7 @@ final class InstructionsScreens {
         nav.add(right, BorderLayout.EAST);
         root.add(nav, BorderLayout.SOUTH);
 
-        final int[] index = {0};
+        final int[] index = { 0 };
 
         Runnable updateDots = () -> {
             for (int i = 0; i < PAGE_COUNT; i++) {
@@ -258,8 +263,8 @@ final class InstructionsScreens {
                 p.add(titleLabel("Power-up blocks"));
                 p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
                 p.add(body(
-                        "Some versions include special glowing blocks that trigger power-ups. Clear them quickly for an "
-                                + "advantage—they may not appear in every build of the game."));
+                        "In the game, type five words in a row with zero mistakes to earn a power-up charge. "
+                                + "Spend a charge from the gameplay bar (or press 1 / 2 / 3) to activate an effect."));
                 p.add(Box.createVerticalStrut(GAP_SECTION));
                 p.add(
                         stripCard(
@@ -464,7 +469,8 @@ final class InstructionsScreens {
     }
 
     /**
-     * Full-width row: glyph cell + title + body (used for power-ups and scoring—same chrome everywhere).
+     * Full-width row: glyph cell + title + body (used for power-ups and
+     * scoring—same chrome everywhere).
      */
     private static JPanel stripCard(String glyph, Color accent, String title, String blurb) {
         JPanel row = new JPanel(new BorderLayout(12, 0));

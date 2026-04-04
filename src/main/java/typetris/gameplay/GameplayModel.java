@@ -4,8 +4,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -35,6 +37,8 @@ public final class GameplayModel {
     public static final int ROWS = 16;
     /** Run "level" in the HUD steps every this many line clears. */
     public static final int LINES_PER_LEVEL = 5;
+    /** Typing mistakes cost one life each; at zero lives the run ends (stack top-out also ends the run). */
+    public static final int STARTING_LIVES = 5;
 
     public interface Listener {
         void onRepaint();
@@ -43,6 +47,20 @@ public final class GameplayModel {
 
         /** Called once when the run ends; stats are readable via getters. */
         void onGameOver();
+
+        /** Mirrors {@code ensureAudioStarted()} on typing / movement keys in {@code gameplay.js}. */
+        default void onAudioUserActivity() {}
+
+        default void onAudioBlockLand() {}
+
+        default void onAudioRowClear(int clearedCount) {}
+
+        default void onAudioPowerUp() {}
+
+        default void onAudioTypingError() {}
+
+        /** Called after a typing error when {@code livesRemaining} is still &gt; 0 (HUD / brief flash). */
+        default void onLifeLost(int livesRemaining) {}
     }
 
     /** Loaded once from {@code /typetris/wordlist.txt}; fallback list if the resource is missing. */
@@ -176,6 +194,31 @@ public final class GameplayModel {
     private double fallAccum;
     private Piece piece;
 
+    /** Active play time this run (pause excluded), in milliseconds. */
+    private long sessionActiveMs;
+    /** Peak of instant and overall WPM observed this run. */
+    private int peakWpmRun;
+    /** Highest run level (from line clears) reached this run. */
+    private int peakLevelRun;
+    /** Words fully typed and unlocked this run. */
+    private int wordsTypedRun;
+
+    /** Matches instructions: Time freeze, Easy words, Block buster — earned after flawless word streaks. */
+    private static final int FLAWLESS_WORDS_PER_CHARGE = 5;
+    private static final double TIME_FREEZE_DURATION_SEC = 4.0;
+    private static final int EASY_WORD_SPAWN_COUNT = 3;
+    private static final int BLOCK_BUSTER_CHEBYSHEV_RADIUS = 2;
+
+    private boolean mistakeOnCurrentWord;
+    private int flawlessWordStreak;
+    private int powerupCharges;
+    private double timeFreezeSecRemaining;
+    private int easyWordSpawnsRemaining;
+    /** Clears nearby locked cells on the next lock (piece footprint preserved). */
+    private boolean blockBusterNextLock;
+
+    private int lives = STARTING_LIVES;
+
     /**
      * Prepares parameters and listener wiring only. Call {@link #startRound()} after the view holds
      * {@code this} so listener methods never run while the UI field is still {@code null}.
@@ -257,6 +300,103 @@ public final class GameplayModel {
         return (int) Math.round((correctInSegment / 5.0) / (elapsedSec / 60.0));
     }
 
+    public int getWrongStrokes() {
+        return wrongStrokes;
+    }
+
+    public long getSessionActivePlayMs() {
+        return sessionActiveMs;
+    }
+
+    /** Peak WPM (max of instant vs overall) observed this run. */
+    public int getPeakWpmRun() {
+        return peakWpmRun;
+    }
+
+    /** Highest level reached this run (from lines cleared). */
+    public int getPeakLevelRun() {
+        return peakLevelRun;
+    }
+
+    /** Words completed (typed and unlocked) this run. */
+    public int getWordsTypedRun() {
+        return wordsTypedRun;
+    }
+
+    public int getLives() {
+        return lives;
+    }
+
+    public int getStartingLives() {
+        return STARTING_LIVES;
+    }
+
+    public int getPowerupCharges() {
+        return powerupCharges;
+    }
+
+    /** Progress toward the next charge (0 until the fifth flawless word in a row). */
+    public int getFlawlessStreakProgress() {
+        return flawlessWordStreak;
+    }
+
+    public int getFlawlessStreakGoal() {
+        return FLAWLESS_WORDS_PER_CHARGE;
+    }
+
+    public double getTimeFreezeRemainingSec() {
+        return timeFreezeSecRemaining;
+    }
+
+    public int getEasyWordSpawnsRemaining() {
+        return easyWordSpawnsRemaining;
+    }
+
+    public boolean isBlockBusterArmed() {
+        return blockBusterNextLock;
+    }
+
+    /**
+     * Slows gravity for a few seconds (instructions: Time freeze).
+     *
+     * @return false if no charge or cannot use now
+     */
+    public boolean activateTimeFreeze() {
+        if (over || paused || powerupCharges <= 0) {
+            return false;
+        }
+        powerupCharges--;
+        timeFreezeSecRemaining = Math.max(timeFreezeSecRemaining, TIME_FREEZE_DURATION_SEC);
+        fireHud();
+        return true;
+    }
+
+    /**
+     * Next spawns use shorter words (instructions: Easy words).
+     */
+    public boolean activateEasyWords() {
+        if (over || paused || powerupCharges <= 0) {
+            return false;
+        }
+        powerupCharges--;
+        easyWordSpawnsRemaining += EASY_WORD_SPAWN_COUNT;
+        fireHud();
+        return true;
+    }
+
+    /**
+     * Next lock clears nearby stack cells (instructions: Block buster).
+     */
+    public boolean activateBlockBuster() {
+        if (over || paused || powerupCharges <= 0) {
+            return false;
+        }
+        powerupCharges--;
+        blockBusterNextLock = true;
+        fireHud();
+        return true;
+    }
+
     // ── pause / unpause ──────────────────────────────────────────────────────
 
     public void togglePause() {
@@ -293,7 +433,17 @@ public final class GameplayModel {
      */
     public void tick(double dt) {
         updateTypingClock();
+        if (!over && !paused) {
+            sessionActiveMs += Math.round(dt * 1000.0);
+        }
+        if (timeFreezeSecRemaining > 0) {
+            timeFreezeSecRemaining = Math.max(0, timeFreezeSecRemaining - dt);
+        }
         if (over || paused || piece == null) return;
+        if (timeFreezeSecRemaining > 0) {
+            listener.onRepaint();
+            return;
+        }
 
         double speed = fallSpeedRowsPerSec();
         fallAccum += dt * speed;
@@ -331,11 +481,12 @@ public final class GameplayModel {
      * longest matching prefix, one wrong-stroke per bad edit, then {@code lastTypedLen} / score / unlock.
      */
     public void onTypingFieldChanged(String rawUppercase) {
-        updateTypingClock();
         // Web: if (state.paused || state.over || !state.piece || state.piece.unlocked) return;
         if (paused || over || piece == null || piece.unlocked) {
             return;
         }
+        listener.onAudioUserActivity();
+        updateTypingClock();
         String target = piece.word;
         if (target == null || target.isEmpty()) {
             return;
@@ -357,8 +508,19 @@ public final class GameplayModel {
 
         if (raw.length() > i) {
             wrongStrokes++;
+            lives--;
+            mistakeOnCurrentWord = true;
+            flawlessWordStreak = 0;
             piece.lastWrongIndex = i;
+            listener.onAudioTypingError();
             raw = raw.substring(0, i);
+            if (lives <= 0) {
+                fireHud();
+                listener.onRepaint();
+                gameOverSequence();
+                return;
+            }
+            listener.onLifeLost(lives);
         }
 
         int gained = i - piece.lastTypedLen;
@@ -372,6 +534,16 @@ public final class GameplayModel {
         if (raw.equals(target)) {
             piece.unlocked = true;
             piece.lastWrongIndex = null;
+            if (!mistakeOnCurrentWord) {
+                flawlessWordStreak++;
+                if (flawlessWordStreak >= FLAWLESS_WORDS_PER_CHARGE) {
+                    flawlessWordStreak = 0;
+                    powerupCharges++;
+                }
+            } else {
+                flawlessWordStreak = 0;
+            }
+            wordsTypedRun++;
             score += 5 * target.length();
             best = Math.max(best, score);
         }
@@ -397,12 +569,14 @@ public final class GameplayModel {
     /** Soft-drop and lock the piece immediately (only when unlocked). Maps to Space per gameplay.html. */
     public void onSpace() {
         if (piece != null && piece.unlocked && !over && !paused) {
+            listener.onAudioUserActivity();
             softDropToGround();
         }
     }
 
     private void tryMove(int dc) {
         if (piece == null || !piece.unlocked || over || paused) return;
+        listener.onAudioUserActivity();
         if (validParts(piece.parts, piece.col + dc, piece.row)) {
             piece.col += dc;
             listener.onRepaint();
@@ -411,6 +585,7 @@ public final class GameplayModel {
 
     private void tryRotate(boolean ccw) {
         if (piece == null || !piece.unlocked || over || paused) return;
+        listener.onAudioUserActivity();
         List<Part> next = rotatePartsCw(copyParts(piece.parts));
         if (ccw) {
             // CCW = three CW rotations
@@ -448,7 +623,16 @@ public final class GameplayModel {
     private void lockFromGround() {
         updateTypingClock();
         if (piece == null || over) return;
+        listener.onAudioBlockLand();
+        boolean buster = blockBusterNextLock;
+        if (buster) {
+            blockBusterNextLock = false;
+        }
+        Set<String> footprint = footprintKeysForPiece();
         mergePiece();
+        if (buster) {
+            applyBlockBusterBlast(footprint);
+        }
         piece = null;
         clearFullLines();
         listener.onRepaint();
@@ -458,6 +642,56 @@ public final class GameplayModel {
         }
         // spawnPiece() ends with fireHud() — no extra HUD pass while piece is null (matches web flow).
         spawnPiece();
+    }
+
+    private Set<String> footprintKeysForPiece() {
+        Set<String> keys = new HashSet<>();
+        if (piece == null) {
+            return keys;
+        }
+        for (Part pt : piece.parts) {
+            int r = piece.row + pt.y;
+            int c = piece.col + pt.x;
+            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                keys.add(r + "," + c);
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * Clears locked cells within Chebyshev radius of the piece center, excluding the merged footprint.
+     */
+    private void applyBlockBusterBlast(Set<String> mergedFootprint) {
+        if (mergedFootprint.isEmpty()) {
+            return;
+        }
+        int minR = ROWS;
+        int maxR = -1;
+        int minC = COLS;
+        int maxC = -1;
+        for (String key : mergedFootprint) {
+            int comma = key.indexOf(',');
+            int r = Integer.parseInt(key.substring(0, comma));
+            int c = Integer.parseInt(key.substring(comma + 1));
+            minR = Math.min(minR, r);
+            maxR = Math.max(maxR, r);
+            minC = Math.min(minC, c);
+            maxC = Math.max(maxC, c);
+        }
+        int centerR = (minR + maxR) / 2;
+        int centerC = (minC + maxC) / 2;
+        int r0 = BLOCK_BUSTER_CHEBYSHEV_RADIUS;
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                if (mergedFootprint.contains(r + "," + c)) {
+                    continue;
+                }
+                if (Math.max(Math.abs(r - centerR), Math.abs(c - centerC)) <= r0 && grid[r][c] != null) {
+                    grid[r][c] = null;
+                }
+            }
+        }
     }
 
     private void mergePiece() {
@@ -499,8 +733,13 @@ public final class GameplayModel {
             }
         }
         if (cleared > 0) {
+            int oldMult = mult;
+            listener.onAudioRowClear(cleared);
             lineStreak++;
             mult = multFromStreak(lineStreak);
+            if (mult > oldMult) {
+                listener.onAudioPowerUp();
+            }
             int base = 100 * cleared * cleared;
             score += (int) (base * mult);
             linesCleared += cleared;
@@ -523,7 +762,15 @@ public final class GameplayModel {
     /** New random word shaped as a tetromino-style piece; immediate collision triggers game over. */
     private void spawnPiece() {
         updateTypingClock();
-        String w = pickWord(params.lenMin(), params.lenMax());
+        mistakeOnCurrentWord = false;
+        String w;
+        if (easyWordSpawnsRemaining > 0) {
+            easyWordSpawnsRemaining--;
+            int cap = Math.min(4, params.lenMax());
+            w = pickWord(3, Math.max(3, cap));
+        } else {
+            w = pickWord(params.lenMin(), params.lenMax());
+        }
         List<Part> parts = wordToParts(w);
         int[] ext = partExtents(parts);
         int col = Math.max(0, (COLS - ext[0]) / 2);
@@ -550,6 +797,10 @@ public final class GameplayModel {
     }
 
     private void fireHud() {
+        if (!over) {
+            peakWpmRun = Math.max(peakWpmRun, Math.max(wpmInstant(), wpmOverall()));
+            peakLevelRun = Math.max(peakLevelRun, runLevelFromLines());
+        }
         listener.onHudChanged();
     }
 
