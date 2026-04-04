@@ -8,6 +8,9 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.RenderingHints;
@@ -16,6 +19,7 @@ import java.sql.SQLException;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -23,11 +27,16 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.Timer;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.table.JTableHeader;
 import javax.swing.border.LineBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 
 import typetris.backend.AuthRepository;
 import typetris.backend.Leaderboard;
@@ -286,9 +295,13 @@ public final class UserInterface extends JFrame {
         b.setBackground(TypeTrisTheme.PRIMARY_CONTAINER);
         b.setForeground(TypeTrisTheme.ON_PRIMARY);
         b.setFocusPainted(false);
-        b.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
+        b.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        BorderFactory.createEmptyBorder(8, 16, 8, 16)));
         b.setOpaque(true);
         b.setContentAreaFilled(true);
+        ButtonRolloverSupport.install(b, TypeTrisTheme.PRIMARY_CONTAINER);
     }
 
     private void styleSecondaryButton(JButton b) {
@@ -296,9 +309,13 @@ public final class UserInterface extends JFrame {
         b.setBackground(TypeTrisTheme.SURFACE_BRIGHT);
         b.setForeground(TypeTrisTheme.ON_SURFACE);
         b.setFocusPainted(false);
-        b.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
+        b.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        BorderFactory.createEmptyBorder(8, 16, 8, 16)));
         b.setOpaque(true);
         b.setContentAreaFilled(true);
+        ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_BRIGHT);
     }
 
     private void styleMutedButton(JButton b) {
@@ -306,17 +323,46 @@ public final class UserInterface extends JFrame {
         b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
         b.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
         b.setFocusPainted(false);
-        b.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
+        b.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        BorderFactory.createEmptyBorder(7, 14, 7, 14)));
         b.setOpaque(true);
         b.setContentAreaFilled(true);
+        ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_HIGH);
     }
 
     private void styleTextField(JTextField f) {
+        styleTextField(f, false);
+    }
+
+    /** @param compact tighter padding and font for login / register rows */
+    private void styleTextField(JTextField f, boolean compact) {
         f.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         f.setForeground(TypeTrisTheme.ON_SURFACE);
         f.setCaretColor(TypeTrisTheme.PRIMARY);
-        f.setBorder(new LineBorder(TypeTrisTheme.OUTLINE, 1));
-        f.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
+        int py = compact ? 3 : 4;
+        int px = compact ? 6 : 8;
+        f.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE, 1),
+                        BorderFactory.createEmptyBorder(py, px, py, px)));
+        f.setFont(TypeTrisTheme.body(compact ? 13f : 14f, Font.PLAIN));
+    }
+
+    private static final int AUTH_FIELD_WIDTH = 248;
+
+    private static void sizeAuthField(JTextField f) {
+        Dimension d = f.getPreferredSize();
+        f.setPreferredSize(new Dimension(AUTH_FIELD_WIDTH, d.height));
+        f.setMaximumSize(new Dimension(AUTH_FIELD_WIDTH, d.height));
+    }
+
+    private static void addAuthFormRow(JPanel form, GridBagConstraints lc, GridBagConstraints fc, int row, JLabel label, JTextField field) {
+        lc.gridy = row;
+        fc.gridy = row;
+        form.add(label, lc);
+        form.add(field, fc);
     }
 
     private void styleFormLabel(JLabel l) {
@@ -336,6 +382,81 @@ public final class UserInterface extends JFrame {
         t.getTableHeader().setFont(TypeTrisTheme.label(11f, Font.BOLD));
         t.setRowHeight(22);
         t.setFillsViewportHeight(true);
+    }
+
+    /**
+     * Same as {@link #styleDataTable} but removes the focused-cell outline (often a yellow ring on macOS)
+     * while keeping row selection fill colors.
+     */
+    private void styleAdminAccountsTable(JTable t) {
+        styleDataTable(t);
+        t.setRowHeight(30);
+        t.setCellSelectionEnabled(false);
+        t.setRowSelectionAllowed(true);
+        t.setColumnSelectionAllowed(false);
+        t.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        DefaultTableCellRenderer noFocusRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c =
+                        super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
+                if (c instanceof JComponent jc) {
+                    jc.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                }
+                return c;
+            }
+        };
+        noFocusRenderer.setOpaque(true);
+        t.setDefaultRenderer(Object.class, noFocusRenderer);
+        t.setDefaultRenderer(String.class, noFocusRenderer);
+        t.setDefaultRenderer(Number.class, noFocusRenderer);
+
+        JTableHeader th = t.getTableHeader();
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable table,
+                    Object value,
+                    boolean isSelected,
+                    boolean hasFocus,
+                    int row,
+                    int column) {
+                Component c =
+                        super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (c instanceof JComponent jc) {
+                    jc.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+                    jc.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
+                    jc.setOpaque(true);
+                }
+                if (c instanceof JLabel jl) {
+                    jl.setForeground(TypeTrisTheme.PRIMARY);
+                    jl.setFont(TypeTrisTheme.label(11f, Font.BOLD));
+                    jl.setHorizontalAlignment(SwingConstants.LEADING);
+                }
+                return c;
+            }
+        };
+        headerRenderer.setOpaque(true);
+        th.setDefaultRenderer(headerRenderer);
+    }
+
+    /**
+     * Username and email get the bulk of width; sessions stays compact. Extra table width is spread
+     * across all columns proportionally so “Last session” does not absorb the entire slack.
+     */
+    private void configureParentAccountsTableColumns(JTable t) {
+        t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        TableColumn c0 = t.getColumnModel().getColumn(0);
+        TableColumn c1 = t.getColumnModel().getColumn(1);
+        TableColumn c2 = t.getColumnModel().getColumn(2);
+        TableColumn c3 = t.getColumnModel().getColumn(3);
+        c0.setPreferredWidth(168);
+        c1.setPreferredWidth(256);
+        c2.setPreferredWidth(94);
+        c2.setMinWidth(64);
+        c2.setMaxWidth(120);
+        c3.setPreferredWidth(188);
     }
 
     private JScrollPane themedScroll(Component view) {
@@ -401,7 +522,10 @@ public final class UserInterface extends JFrame {
         par.setAlignmentX(CENTER_ALIGNMENT);
         par.setMaximumSize(new Dimension(440, 40));
         styleSecondaryButton(par);
-        par.setBorder(new LineBorder(TypeTrisTheme.TERTIARY.darker(), 1));
+        par.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.TERTIARY.darker(), 1),
+                        BorderFactory.createEmptyBorder(8, 16, 8, 16)));
         par.addActionListener(e -> showCard(CARD_PARENT));
         p.add(par);
         p.add(javax.swing.Box.createVerticalStrut(8));
@@ -419,20 +543,34 @@ public final class UserInterface extends JFrame {
     // authentication
 
     private JPanel buildLoginPanel() {
-        JPanel form = new JPanel(new java.awt.GridLayout(0, 2, 8, 8));
-        form.setOpaque(false);
-        JTextField user = new JTextField(16);
-        JPasswordField pass = new JPasswordField(16);
-        styleTextField(user);
-        styleTextField(pass);
+        JTextField user = new JTextField();
+        JPasswordField pass = new JPasswordField();
+        styleTextField(user, true);
+        styleTextField(pass, true);
+        sizeAuthField(user);
+        sizeAuthField(pass);
+
         JLabel lu = new JLabel("Username");
         styleFormLabel(lu);
         JLabel lp = new JLabel("Password");
         styleFormLabel(lp);
-        form.add(lu);
-        form.add(user);
-        form.add(lp);
-        form.add(pass);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.insets = new Insets(6, 0, 6, 10);
+        lc.anchor = GridBagConstraints.LINE_END;
+        lc.gridx = 0;
+        lc.fill = GridBagConstraints.NONE;
+        lc.weightx = 0;
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.insets = new Insets(6, 0, 6, 0);
+        fc.anchor = GridBagConstraints.LINE_START;
+        fc.gridx = 1;
+        fc.fill = GridBagConstraints.NONE;
+        fc.weightx = 0;
+        addAuthFormRow(form, lc, fc, 0, lu, user);
+        addAuthFormRow(form, lc, fc, 1, lp, pass);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttons.setOpaque(false);
@@ -470,22 +608,28 @@ public final class UserInterface extends JFrame {
         head.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
         head.setForeground(TypeTrisTheme.PRIMARY);
         p.add(head, BorderLayout.NORTH);
-        p.add(form, BorderLayout.CENTER);
+        JPanel formHost = new JPanel(new BorderLayout());
+        formHost.setOpaque(false);
+        formHost.add(form, BorderLayout.NORTH);
+        p.add(formHost, BorderLayout.CENTER);
         p.add(buttons, BorderLayout.SOUTH);
         return themedCard(p);
     }
 
     private JPanel buildRegisterPanel() {
-        JPanel form = new JPanel(new java.awt.GridLayout(0, 2, 8, 8));
-        form.setOpaque(false);
-        JTextField email = new JTextField(16);
-        JTextField user = new JTextField(16);
-        JPasswordField pass = new JPasswordField(16);
-        JPasswordField confirm = new JPasswordField(16);
-        styleTextField(email);
-        styleTextField(user);
-        styleTextField(pass);
-        styleTextField(confirm);
+        JTextField email = new JTextField();
+        JTextField user = new JTextField();
+        JPasswordField pass = new JPasswordField();
+        JPasswordField confirm = new JPasswordField();
+        styleTextField(email, true);
+        styleTextField(user, true);
+        styleTextField(pass, true);
+        styleTextField(confirm, true);
+        sizeAuthField(email);
+        sizeAuthField(user);
+        sizeAuthField(pass);
+        sizeAuthField(confirm);
+
         JLabel e1 = new JLabel("Email");
         styleFormLabel(e1);
         JLabel u1 = new JLabel("Username");
@@ -494,14 +638,25 @@ public final class UserInterface extends JFrame {
         styleFormLabel(p1);
         JLabel c1 = new JLabel("Confirm password");
         styleFormLabel(c1);
-        form.add(e1);
-        form.add(email);
-        form.add(u1);
-        form.add(user);
-        form.add(p1);
-        form.add(pass);
-        form.add(c1);
-        form.add(confirm);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints lc = new GridBagConstraints();
+        lc.insets = new Insets(5, 0, 5, 10);
+        lc.anchor = GridBagConstraints.LINE_END;
+        lc.gridx = 0;
+        lc.fill = GridBagConstraints.NONE;
+        lc.weightx = 0;
+        GridBagConstraints fc = new GridBagConstraints();
+        fc.insets = new Insets(5, 0, 5, 0);
+        fc.anchor = GridBagConstraints.LINE_START;
+        fc.gridx = 1;
+        fc.fill = GridBagConstraints.NONE;
+        fc.weightx = 0;
+        addAuthFormRow(form, lc, fc, 0, e1, email);
+        addAuthFormRow(form, lc, fc, 1, u1, user);
+        addAuthFormRow(form, lc, fc, 2, p1, pass);
+        addAuthFormRow(form, lc, fc, 3, c1, confirm);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttons.setOpaque(false);
@@ -560,7 +715,10 @@ public final class UserInterface extends JFrame {
         head.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
         head.setForeground(TypeTrisTheme.PRIMARY);
         p.add(head, BorderLayout.NORTH);
-        p.add(form, BorderLayout.CENTER);
+        JPanel formHost = new JPanel(new BorderLayout());
+        formHost.setOpaque(false);
+        formHost.add(form, BorderLayout.NORTH);
+        p.add(formHost, BorderLayout.CENTER);
         p.add(buttons, BorderLayout.SOUTH);
         return themedCard(p);
     }
@@ -759,35 +917,9 @@ public final class UserInterface extends JFrame {
     // send help text
 
     private JPanel buildInstructionsPanel() {
-        JTextArea area = new JTextArea(
-                "TYPE-TRIS — typing + Tetris-style play.\n\n"
-                        + "• Register an account or log in.\n"
-                        + "• Use Start game to pick a tier and level, then type words to unlock pieces and clear lines.\n"
-                        + "• Parent/teacher tools use PIN 2212 (course demo).\n",
-                8,
-                40);
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-        area.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
-        area.setForeground(TypeTrisTheme.ON_SURFACE);
-        area.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
-        area.setCaretColor(TypeTrisTheme.PRIMARY);
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttons.setOpaque(false);
-        JButton back = new JButton("Back");
-        styleSecondaryButton(back);
-        back.addActionListener(e -> showCard(CARD_MENU));
-        buttons.add(back);
-        JPanel p = new JPanel(new BorderLayout(0, 12));
-        p.setOpaque(false);
-        JLabel head = new JLabel("HOW TO PLAY");
-        head.setFont(TypeTrisTheme.headline(18f, Font.BOLD));
-        head.setForeground(TypeTrisTheme.SECONDARY);
-        p.add(head, BorderLayout.NORTH);
-        p.add(themedScroll(area), BorderLayout.CENTER);
-        p.add(buttons, BorderLayout.SOUTH);
-        return themedCard(p);
+        JPanel wizard = InstructionsScreens.createWizard(() -> showCard(CARD_MENU));
+        wizard.setOpaque(false);
+        return themedCard(wizard);
     }
 
     // parent teacher tools
@@ -831,7 +963,8 @@ public final class UserInterface extends JFrame {
         return themedCard(p);
     }
 
-    private void refreshParentTable() {
+    /** @return {@code true} if rows were loaded from the database without error */
+    private boolean refreshParentTable() {
         parentModel.setRowCount(0);
         try {
             for (AuthRepository.UserAccount ua : auth.listUserAccounts()) {
@@ -842,26 +975,53 @@ public final class UserInterface extends JFrame {
                     ua.lastSessionAt() != null ? ua.lastSessionAt() : "—"
                 });
             }
+            return true;
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Accounts", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
     private JPanel buildParentDashboardPanel() {
-        JPanel tools = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tools.setOpaque(false);
         JButton refresh = new JButton("Refresh list");
-        refresh.addActionListener(e -> refreshParentTable());
         styleSecondaryButton(refresh);
+        JButton viewStats = new JButton("View stats");
+        viewStats.addActionListener(e -> viewStatsForSelectedPlayer());
+        styleSecondaryButton(viewStats);
         JButton del = new JButton("Delete selected");
         del.addActionListener(e -> deleteSelectedParentUser());
         styleSecondaryButton(del);
         JButton reset = new JButton("Reset password");
         reset.addActionListener(e -> resetSelectedPassword());
         styleSecondaryButton(reset);
-        tools.add(refresh);
-        tools.add(del);
-        tools.add(reset);
+
+        JLabel refreshHint = new JLabel(" ");
+        refreshHint.setFont(TypeTrisTheme.label(10f, Font.PLAIN));
+        refreshHint.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        refresh.addActionListener(e -> {
+            if (refreshParentTable()) {
+                int n = parentModel.getRowCount();
+                refreshHint.setText(n == 1 ? "Loaded 1 account." : "Loaded " + n + " accounts.");
+                Timer clear = new Timer(3500, ev -> refreshHint.setText(" "));
+                clear.setRepeats(false);
+                clear.start();
+            }
+        });
+
+        JPanel toolsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        toolsLeft.setOpaque(false);
+        toolsLeft.add(refresh);
+        toolsLeft.add(javax.swing.Box.createHorizontalStrut(12));
+        toolsLeft.add(refreshHint);
+        JPanel toolsRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        toolsRight.setOpaque(false);
+        toolsRight.add(viewStats);
+        toolsRight.add(del);
+        toolsRight.add(reset);
+        JPanel tools = new JPanel(new BorderLayout(12, 0));
+        tools.setOpaque(false);
+        tools.add(toolsLeft, BorderLayout.WEST);
+        tools.add(toolsRight, BorderLayout.EAST);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttons.setOpaque(false);
@@ -870,7 +1030,8 @@ public final class UserInterface extends JFrame {
         back.addActionListener(e -> showCard(CARD_PARENT));
         buttons.add(back);
 
-        styleDataTable(parentTable);
+        styleAdminAccountsTable(parentTable);
+        configureParentAccountsTableColumns(parentTable);
 
         JPanel p = new JPanel(new BorderLayout(0, 8));
         p.setOpaque(false);
@@ -887,11 +1048,41 @@ public final class UserInterface extends JFrame {
         return themedCard(p);
     }
 
+    /** Shows rolling stats for the table selection (same fields as the player Statistics screen). */
+    private void viewStatsForSelectedPlayer() {
+        int row = parentTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Select a player first.", "Statistics", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String username = (String) parentModel.getValueAt(row, 0);
+        try {
+            PlayerAccount pa = auth.findPlayerAccount(username);
+            if (pa == null) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No statistics on file for " + username + ".",
+                        "Statistics",
+                        JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            String msg = String.format(
+                    "Player: %s%n%nHigh score: %d%nBest WPM: %d%nAverage accuracy: %.1f%%",
+                    pa.username(),
+                    pa.highScore(),
+                    pa.bestWPM(),
+                    pa.avgAccuracy());
+            JOptionPane.showMessageDialog(this, msg, "Player statistics", JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Statistics", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     /** deletes the selected account after PIN confirmation. */
     private void deleteSelectedParentUser() {
         int row = parentTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Select a row first.", "Delete", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select a player first.", "Delete", JOptionPane.WARNING_MESSAGE);
             return;
         }
         String username = (String) parentModel.getValueAt(row, 0);
@@ -917,7 +1108,7 @@ public final class UserInterface extends JFrame {
     private void resetSelectedPassword() {
         int row = parentTable.getSelectedRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Select a row first.", "Reset", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select a player first.", "Reset", JOptionPane.WARNING_MESSAGE);
             return;
         }
         String username = (String) parentModel.getValueAt(row, 0);
@@ -948,6 +1139,7 @@ public final class UserInterface extends JFrame {
         JPanel outer = new JPanel(new BorderLayout(0, 16));
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton back = new JButton("Back");
+        styleSecondaryButton(back);
         back.addActionListener(e -> goPlayerMenu());
         top.add(back);
         outer.add(top, BorderLayout.NORTH);

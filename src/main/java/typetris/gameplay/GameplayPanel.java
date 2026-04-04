@@ -17,7 +17,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Objects;
 import java.util.function.Consumer;
+
 import javax.swing.AbstractAction;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -38,6 +40,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
  
 import typetris.backend.AuthRepository;
+import typetris.ui.ButtonRolloverSupport;
 import typetris.ui.ClientPrefs;
 import typetris.ui.Screens;
 import typetris.ui.TypeTrisTheme;
@@ -181,10 +184,14 @@ public final class GameplayPanel extends JPanel {
         typing.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         typing.setForeground(TypeTrisTheme.ON_SURFACE);
         typing.setCaretColor(TypeTrisTheme.PRIMARY);
-        typing.setFont(TypeTrisTheme.body(18f, Font.PLAIN));
-        typing.setBorder(new LineBorder(TypeTrisTheme.OUTLINE, 1));
-        typing.setHorizontalAlignment(JTextField.LEFT); // visually align to the left
-        // force A–Z only and uppercase so the model always sees a single consistent alphabet.
+        typing.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
+        typing.setColumns(14);
+        typing.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE, 1),
+                        new EmptyBorder(4, 10, 4, 10)));
+        typing.setHorizontalAlignment(JTextField.LEFT);
+        // Force A–Z only and uppercase so the model always sees a single consistent alphabet.
         ((AbstractDocument) typing.getDocument()).setDocumentFilter(new DocumentFilter() {
             @Override
             public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
@@ -301,7 +308,11 @@ public final class GameplayPanel extends JPanel {
  
         hintTyping.setFont(TypeTrisTheme.label(11f, Font.BOLD));
         hintTyping.setForeground(TypeTrisTheme.PRIMARY);
-        typingRow.add(typing, BorderLayout.CENTER);
+        hintTyping.setHorizontalAlignment(JLabel.CENTER);
+        JPanel typingFieldWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        typingFieldWrap.setOpaque(false);
+        typingFieldWrap.add(typing);
+        typingRow.add(typingFieldWrap, BorderLayout.CENTER);
         typingRow.add(hintTyping, BorderLayout.SOUTH);
         // CHANGE 4 continued: typingRow goes into belowBoard CENTER; belowBoard goes into playCol SOUTH.
         belowBoard.add(typingRow, BorderLayout.CENTER);
@@ -400,7 +411,13 @@ public final class GameplayPanel extends JPanel {
         b.setForeground(fg);
         b.setFont(TypeTrisTheme.label(11f, Font.BOLD));
         b.setFocusPainted(false);
-        b.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
+        b.setOpaque(true);
+        b.setContentAreaFilled(true);
+        b.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(6, 14, 6, 14)));
+        ButtonRolloverSupport.install(b, bg);
         return b;
     }
  
