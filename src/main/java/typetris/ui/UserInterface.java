@@ -571,9 +571,14 @@ public final class UserInterface extends JFrame {
                         + "Winter 2026 · <span style='color:#ff51fa'><b>Group 26</b></span><br><br>"
                         + "Fiona Xu · Wanyi Chen · Jaclyn Guo<br>"
                         + "Sarah Lieng · Bonnie Qiu"
-                        + "</div></html>");
-        credits.setAlignmentX(CENTER_ALIGNMENT);
-        p.add(credits);
+                        + "</div></html>",
+                SwingConstants.CENTER);
+        credits.setHorizontalAlignment(SwingConstants.CENTER);
+        JPanel creditsWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        creditsWrap.setOpaque(false);
+        creditsWrap.setAlignmentX(CENTER_ALIGNMENT);
+        creditsWrap.add(credits);
+        p.add(creditsWrap);
         p.add(javax.swing.Box.createVerticalStrut(10));
 
         return themedCard(p);
@@ -597,25 +602,21 @@ public final class UserInterface extends JFrame {
         JLabel lp = new JLabel("Password");
         styleFormLabel(lp);
 
-        JPanel loginForm = new JPanel(new GridBagLayout());
+        JPanel loginForm = new JPanel();
+        loginForm.setLayout(new javax.swing.BoxLayout(loginForm, javax.swing.BoxLayout.Y_AXIS));
         loginForm.setOpaque(false);
-        GridBagConstraints lc = new GridBagConstraints();
-        lc.insets = new Insets(6, 0, 6, 10);
-        lc.anchor = GridBagConstraints.LINE_END;
-        lc.gridx = 0;
-        lc.fill = GridBagConstraints.NONE;
-        lc.weightx = 0;
-        GridBagConstraints fc = new GridBagConstraints();
-        fc.insets = new Insets(6, 0, 6, 0);
-        fc.anchor = GridBagConstraints.LINE_START;
-        fc.gridx = 1;
-        fc.fill = GridBagConstraints.NONE;
-        fc.weightx = 0;
-        addAuthFormRow(loginForm, lc, fc, 0, lu, loginUser);
-        addAuthFormRow(loginForm, lc, fc, 1, lp, loginPass);
+        lu.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginUser.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginForm.add(lu);
+        loginForm.add(javax.swing.Box.createVerticalStrut(4));
+        loginForm.add(loginUser);
+        loginForm.add(javax.swing.Box.createVerticalStrut(14));
+        lp.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginPass.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loginForm.add(lp);
+        loginForm.add(javax.swing.Box.createVerticalStrut(4));
+        loginForm.add(loginPass);
 
-        JPanel loginButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        loginButtons.setOpaque(false);
         JButton loginOk = new JButton("Login");
         JButton loginBack = new JButton("Back");
         stylePrimaryButton(loginOk);
@@ -644,12 +645,6 @@ public final class UserInterface extends JFrame {
             }
         });
         loginBack.addActionListener(e -> showCard(CARD_MENU));
-        loginButtons.add(loginBack);
-        loginButtons.add(loginOk);
-
-        JPanel loginFormHost = new JPanel(new BorderLayout());
-        loginFormHost.setOpaque(false);
-        loginFormHost.add(loginForm, BorderLayout.NORTH);
 
         JLabel noAccountHint = new JLabel("Don't have an account yet?");
         noAccountHint.setFont(TypeTrisTheme.label(11f, Font.PLAIN));
@@ -663,19 +658,33 @@ public final class UserInterface extends JFrame {
         createAccountBtn.addActionListener(
                 e -> ((CardLayout) authModePanel.getLayout()).show(authModePanel, AUTH_VIEW_REGISTER));
 
-        JPanel loginCenter = new JPanel();
-        loginCenter.setLayout(new javax.swing.BoxLayout(loginCenter, javax.swing.BoxLayout.Y_AXIS));
-        loginCenter.setOpaque(false);
-        loginCenter.add(loginFormHost);
-        loginCenter.add(javax.swing.Box.createVerticalStrut(20));
-        loginCenter.add(noAccountHint);
-        loginCenter.add(javax.swing.Box.createVerticalStrut(10));
-        loginCenter.add(createAccountBtn);
+        JPanel formWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        formWrap.setOpaque(false);
+        formWrap.add(loginForm);
+
+        JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        actionsRow.setOpaque(false);
+        actionsRow.add(loginBack);
+        actionsRow.add(loginOk);
+        actionsRow.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel loginColumn = new JPanel();
+        loginColumn.setLayout(new javax.swing.BoxLayout(loginColumn, javax.swing.BoxLayout.Y_AXIS));
+        loginColumn.setOpaque(false);
+        loginColumn.add(javax.swing.Box.createVerticalGlue());
+        formWrap.setAlignmentX(Component.CENTER_ALIGNMENT);
+        loginColumn.add(formWrap);
+        loginColumn.add(javax.swing.Box.createVerticalStrut(24));
+        loginColumn.add(noAccountHint);
+        loginColumn.add(javax.swing.Box.createVerticalStrut(8));
+        loginColumn.add(createAccountBtn);
+        loginColumn.add(javax.swing.Box.createVerticalStrut(16));
+        loginColumn.add(actionsRow);
+        loginColumn.add(javax.swing.Box.createVerticalGlue());
 
         JPanel loginTab = new JPanel(new BorderLayout(0, 12));
         loginTab.setOpaque(false);
-        loginTab.add(loginCenter, BorderLayout.CENTER);
-        loginTab.add(loginButtons, BorderLayout.SOUTH);
+        loginTab.add(loginColumn, BorderLayout.CENTER);
         loginTab.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         JTextField email = new JTextField();
