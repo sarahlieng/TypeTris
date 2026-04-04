@@ -196,15 +196,6 @@
             OPTIONS
           </button>
 
-          <!-- SAVE GAME: Dark Outlined -->
-          <button
-            id="pause-save"
-            type="button"
-            class="w-full py-4 bg-transparent border-2 border-outline-variant text-on-surface font-headline font-bold text-lg hover:border-primary-container hover:text-primary-container transition-all duration-200 active:scale-95 flex items-center justify-center gap-2"
-          >
-            SAVE GAME
-          </button>
-
           <!-- QUIT GAME: Dark Outlined with Error text -->
           <button
             id="pause-quit"
@@ -214,6 +205,23 @@
             QUIT GAME
           </button>
         </nav>
+      </div>
+    </main>
+  </div>
+
+  <div id="quit-confirm-overlay" class="fixed inset-0 hidden z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center" aria-hidden="true">
+    <main class="relative z-[60] w-full max-w-md mx-4">
+      <div class="bg-surface-container border border-outline-variant/30 glow-primary p-10 flex flex-col items-center text-center">
+        <p class="font-headline text-xl font-bold text-on-surface mb-8">
+          Your progress will not be saved.
+        </p>
+        <button
+          id="quit-confirm-ok"
+          type="button"
+          class="w-full py-4 bg-primary-container text-on-primary-container font-headline font-bold text-lg hover:bg-primary transition-all duration-200 active:scale-95"
+        >
+          OK
+        </button>
       </div>
     </main>
   </div>
