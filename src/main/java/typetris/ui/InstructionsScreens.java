@@ -1,27 +1,8 @@
 package typetris.ui;
 
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Insets;
-
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.border.*;
 
 /**
  * Eight-step HOW TO PLAY flow matching the web
@@ -408,7 +389,7 @@ final class InstructionsScreens {
         return t;
     }
 
-    /** Top border only (Swing has no MatteTopBorder — use custom). */
+    /** Top border only */
     private static final class MatteTopBorder extends javax.swing.border.AbstractBorder {
         private final int thickness;
         private final Color color;
