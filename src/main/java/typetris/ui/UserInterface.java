@@ -1324,18 +1324,16 @@ public final class UserInterface extends JFrame {
                 return;
             }
             String msg = String.format(
-                    """
-                            Player: %s
-
-                            Average WPM: %.1f
-                            Peak WPM: %d
-                            Accuracy: %.1f%%
-                            Errors: %d
-                            Total time: %s
-                            High score: %d
-                            Highest level: %d
-                            Words typed: %d
-                            Games played: %d""",
+                    "Player: %s%n%n"
+                            + "Average WPM: %.1f%n"
+                            + "Peak WPM: %d%n"
+                            + "Accuracy: %.1f%%%n"
+                            + "Errors: %d%n"
+                            + "Total time: %s%n"
+                            + "High score: %d%n"
+                            + "Highest level: %d%n"
+                            + "Words typed: %d%n"
+                            + "Games played: %d",
                     pa.username(),
                     pa.avgWpm(),
                     pa.bestWPM(),
