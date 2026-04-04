@@ -669,9 +669,14 @@ public final class UserInterface extends JFrame {
                         + "Winter 2026 · <span style='color:#ff51fa'><b>Group 26</b></span><br><br>"
                         + "Fiona Xu · Wanyi Chen · Jaclyn Guo<br>"
                         + "Sarah Lieng · Bonnie Qiu"
-                        + "</div></html>");
-        credits.setAlignmentX(CENTER_ALIGNMENT);
-        p.add(credits);
+                        + "</div></html>",
+                SwingConstants.CENTER);
+        credits.setHorizontalAlignment(SwingConstants.CENTER);
+        JPanel creditsWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        creditsWrap.setOpaque(false);
+        creditsWrap.setAlignmentX(CENTER_ALIGNMENT);
+        creditsWrap.add(credits);
+        p.add(creditsWrap);
         p.add(javax.swing.Box.createVerticalStrut(10));
 
         return themedCard(p);
