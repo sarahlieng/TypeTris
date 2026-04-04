@@ -63,11 +63,11 @@ public final class GameplayModel {
         default void onLifeLost(int livesRemaining) {}
     }
 
-    /** Loaded once from {@code /typetris/wordlist.txt}; fallback list if the resource is missing. */
+    /** Loaded once from {@code /typetris/wordbank.txt}; fallback list if the resource is missing. */
     private static List<String> wordList = List.of("TYPE", "WORD", "GAME");
 
     static {
-        try (var in = GameplayModel.class.getResourceAsStream("/typetris/wordlist.txt")) {
+        try (var in = GameplayModel.class.getResourceAsStream("/typetris/wordbank.txt")) {
             if (in != null) {
                 String all = new String(in.readAllBytes(), StandardCharsets.UTF_8);
                 List<String> wl = new ArrayList<>();
