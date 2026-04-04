@@ -63,16 +63,50 @@
     container.appendChild(table);
   }
 
+  function dashboardUsername() {
+    try {
+      var s = window.sessionStorage.getItem("typetrisPlayerUsername");
+      if (s && String(s).trim()) {
+        return String(s).trim();
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      var l = window.localStorage.getItem("typeTrisUsername");
+      if (l && String(l).trim()) {
+        return String(l).trim();
+      }
+    } catch (e2) {
+      /* ignore */
+    }
+    return "";
+  }
+
+  function applyPlayerStatsToLabels(player) {
+    var p = player || {};
+    var hi = document.getElementById("highScore-label");
+    var bestWpmEl = document.getElementById("bestWpm-label");
+    var avgAccEl = document.getElementById("avgAccuracy-label");
+    if (hi) {
+      hi.textContent =
+        p.highScore != null && p.highScore !== "" ? String(p.highScore) : "--";
+    }
+    if (bestWpmEl) {
+      bestWpmEl.textContent =
+        p.bestWPM != null && p.bestWPM !== "" ? String(p.bestWPM) : "--";
+    }
+    if (avgAccEl) {
+      avgAccEl.textContent = accuracyToPercent(p.avgAccuracy);
+    }
+  }
+
   function init() {
     var messageEl = document.getElementById("dashboard-message");
     var logoutButton = document.getElementById("logout-button");
-    var username;
-
-    try {
-      username = window.localStorage.getItem("typeTrisUsername");
-    } catch (e) {
-      username = null;
-    }
+    var saveGameBtn = document.getElementById("dashboard-save-game");
+    var loadGameBtn = document.getElementById("dashboard-load-game");
+    var username = dashboardUsername();
 
     if (logoutButton) {
       logoutButton.addEventListener("click", function () {
@@ -81,7 +115,71 @@
         } catch (e) {
           // ignore
         }
+        try {
+          window.sessionStorage.removeItem("typetrisPlayerUsername");
+        } catch (e2) {
+          // ignore
+        }
         window.location.href = "login.html";
+      });
+    }
+
+    if (saveGameBtn) {
+      saveGameBtn.addEventListener("click", async function () {
+        var u = dashboardUsername();
+        if (!u) {
+          showMessage(messageEl, "Login required.", true);
+          return;
+        }
+        var res;
+        try {
+          res = await fetch("/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: u })
+          });
+        } catch (err) {
+          showMessage(messageEl, "Save failed.", true);
+          return;
+        }
+        if (res.ok) {
+          showMessage(messageEl, "Game saved!", false);
+        } else {
+          showMessage(messageEl, "Save failed.", true);
+        }
+      });
+    }
+
+    if (loadGameBtn) {
+      loadGameBtn.addEventListener("click", async function () {
+        var u = dashboardUsername();
+        if (!u) {
+          showMessage(messageEl, "Login required.", true);
+          return;
+        }
+        var res;
+        try {
+          res = await fetch("/api/load/" + encodeURIComponent(u), { method: "GET" });
+        } catch (err) {
+          showMessage(messageEl, "Load failed.", true);
+          return;
+        }
+        if (res.status === 404) {
+          showMessage(messageEl, "No save found.", true);
+          return;
+        }
+        if (!res.ok) {
+          showMessage(messageEl, "Load failed.", true);
+          return;
+        }
+        var data = {};
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = {};
+        }
+        applyPlayerStatsToLabels(data);
+        showMessage(messageEl, "Loaded.", false);
       });
     }
 
@@ -165,10 +263,7 @@
         }
 
         var player = data.player || {};
-        var bestWpmEl = document.getElementById("bestWpm-label");
-        var avgAccEl = document.getElementById("avgAccuracy-label");
-        if (bestWpmEl) bestWpmEl.textContent = (player.bestWPM ?? 0).toString();
-        if (avgAccEl) avgAccEl.textContent = accuracyToPercent(player.avgAccuracy);
+        applyPlayerStatsToLabels(player);
       };
 
       this.loadLeaderboard = async function () {

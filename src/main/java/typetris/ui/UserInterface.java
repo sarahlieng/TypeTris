@@ -33,6 +33,7 @@ import typetris.backend.AuthRepository;
 import typetris.backend.Leaderboard;
 import typetris.backend.PasswordUtil;
 import typetris.backend.PlayerAccount;
+import typetris.backend.SaveManager;
 import typetris.gameplay.GameplayPanel;
 
 /**
@@ -67,6 +68,7 @@ public final class UserInterface extends JFrame {
     private static final String ADMIN_PIN = "2212";
 
     private final AuthRepository auth;
+    private final SaveManager saveManager = new SaveManager();
     private final CardLayout cards = new CardLayout();
     private final JPanel root = new JPanel(cards);
 
@@ -596,6 +598,61 @@ public final class UserInterface extends JFrame {
             showCard(CARD_DIFFICULTY);
         });
         p.add(game);
+        p.add(javax.swing.Box.createVerticalStrut(10));
+
+        JPanel saveRow = new JPanel(new GridLayout(1, 2, 10, 0));
+        saveRow.setOpaque(false);
+        saveRow.setMaximumSize(new Dimension(400, 40));
+        JButton saveBtn = new JButton("SAVE");
+        styleSecondaryButton(saveBtn);
+        saveBtn.addActionListener(e -> {
+            if (loggedInUser == null) {
+                JOptionPane.showMessageDialog(this, "Log in first.", "Save", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                PlayerAccount acc = saveManager.loadAccount(loggedInUser);
+                if (acc == null) {
+                    acc = auth.findPlayerAccount(loggedInUser);
+                    if (acc == null) {
+                        acc = new PlayerAccount(loggedInUser, 0, 0, 0.0);
+                    }
+                }
+                if (saveManager.saveAccount(acc)) {
+                    JOptionPane.showMessageDialog(this, "Game saved!", "Save", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Save failed.", "Save", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Save failed.", "Save", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        JButton loadBtn = new JButton("LOAD");
+        styleSecondaryButton(loadBtn);
+        loadBtn.addActionListener(e -> {
+            if (loggedInUser == null) {
+                JOptionPane.showMessageDialog(this, "Log in first.", "Load", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            PlayerAccount acc = saveManager.loadAccount(loggedInUser);
+            if (acc == null) {
+                JOptionPane.showMessageDialog(this, "No save found.", "Load", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Loaded.\nHigh score: "
+                            + acc.highScore()
+                            + "\nBest WPM: "
+                            + acc.bestWPM()
+                            + "\nAvg accuracy: "
+                            + String.format("%.1f%%", acc.avgAccuracy()),
+                    "Load",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+        saveRow.add(saveBtn);
+        saveRow.add(loadBtn);
+        p.add(saveRow);
         p.add(javax.swing.Box.createVerticalStrut(10));
 
         JPanel row = new JPanel(new GridLayout(1, 2, 10, 0));

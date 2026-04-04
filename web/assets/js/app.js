@@ -235,6 +235,85 @@
     });
   }
 
+  function playerMenuAccuracyLabel(avgAccuracy) {
+    var value = Number(avgAccuracy);
+    if (!isFinite(value)) {
+      return "--";
+    }
+    var pct = value > 1 ? value : value * 100;
+    return pct.toFixed(1) + "%";
+  }
+
+  function wireMainMenu() {
+    var saveBtn = document.getElementById("index-menu-save");
+    var loadBtn = document.getElementById("index-menu-load");
+    var msg = document.getElementById("index-menu-message");
+    if (!saveBtn && !loadBtn) {
+      return;
+    }
+
+    function loggedInUsername() {
+      var u = sessionStorage.getItem("typetrisPlayerUsername");
+      return u ? String(u).trim() : "";
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener("click", async function () {
+        var name = loggedInUsername();
+        if (!name) {
+          showMessage(msg, "Please log in first.", true);
+          return;
+        }
+        var result = await postJson("/api/save", { username: name });
+        if (result.ok) {
+          showMessage(msg, "Game saved!", false);
+        } else {
+          showMessage(msg, "Save failed.", true);
+        }
+      });
+    }
+
+    if (loadBtn) {
+      loadBtn.addEventListener("click", async function () {
+        var name = loggedInUsername();
+        if (!name) {
+          showMessage(msg, "Please log in first.", true);
+          return;
+        }
+        var url = "/api/load/" + encodeURIComponent(name);
+        var response;
+        try {
+          response = await fetch(url, { method: "GET" });
+        } catch (err) {
+          showMessage(msg, "Load failed.", true);
+          return;
+        }
+        if (response.status === 404) {
+          showMessage(msg, "No save found.", true);
+          return;
+        }
+        if (!response.ok) {
+          showMessage(msg, "Load failed.", true);
+          return;
+        }
+        var data = {};
+        try {
+          data = await response.json();
+        } catch (err) {
+          data = {};
+        }
+        var hi = data.highScore != null && data.highScore !== "" ? String(data.highScore) : "—";
+        var wpm = data.bestWPM != null && data.bestWPM !== "" ? String(data.bestWPM) : "—";
+        var acc = playerMenuAccuracyLabel(data.avgAccuracy);
+        showMessage(
+          msg,
+          "Loaded — high " + hi + ", WPM " + wpm + ", acc " + acc,
+          false
+        );
+      });
+    }
+  }
+
   function wirePlayerMenu() {
     var usernameEl = document.getElementById("player-menu-username");
     if (!usernameEl) {
@@ -247,10 +326,105 @@
     }
     usernameEl.textContent = name;
 
+    var msg = document.getElementById("player-menu-message");
+    var statHigh = document.getElementById("player-menu-stat-high");
+    var statWpm = document.getElementById("player-menu-stat-wpm");
+    var statAcc = document.getElementById("player-menu-stat-acc");
+
+    var playerMenuMsgTimer = null;
+    function showPlayerMenuMessageTimed(el, text, isError) {
+      if (!el) {
+        return;
+      }
+      if (playerMenuMsgTimer !== null) {
+        clearTimeout(playerMenuMsgTimer);
+        playerMenuMsgTimer = null;
+      }
+      el.textContent = text;
+      el.classList.remove("hidden", "text-primary", "text-secondary", "text-red-400");
+      el.classList.add(isError ? "text-red-400" : "text-primary");
+      playerMenuMsgTimer = window.setTimeout(function () {
+        el.classList.add("hidden");
+        el.textContent = "";
+        playerMenuMsgTimer = null;
+      }, 3000);
+    }
+
+    function playerMenuUsernameForApi() {
+      try {
+        var s = sessionStorage.getItem("typetrisPlayerUsername");
+        if (s && String(s).trim()) {
+          return String(s).trim();
+        }
+      } catch (e) {}
+      try {
+        var l = localStorage.getItem("typeTrisUsername");
+        if (l && String(l).trim()) {
+          return String(l).trim();
+        }
+      } catch (e2) {}
+      return "";
+    }
+
     var saveBtn = document.getElementById("player-menu-save");
     if (saveBtn) {
-      saveBtn.addEventListener("click", function () {
-        window.alert("Save game is not implemented yet.");
+      saveBtn.addEventListener("click", async function () {
+        var u = playerMenuUsernameForApi();
+        if (!u) {
+          showPlayerMenuMessageTimed(msg, "Save failed.", true);
+          return;
+        }
+        var result = await postJson("/api/save", { username: u });
+        if (result.ok) {
+          showPlayerMenuMessageTimed(msg, "Game saved!", false);
+        } else {
+          showPlayerMenuMessageTimed(msg, "Save failed.", true);
+        }
+      });
+    }
+
+    var loadBtn = document.getElementById("player-menu-load");
+    if (loadBtn) {
+      loadBtn.addEventListener("click", async function () {
+        var u = playerMenuUsernameForApi();
+        if (!u) {
+          showPlayerMenuMessageTimed(msg, "Load failed.", true);
+          return;
+        }
+        var url = "/api/load/" + encodeURIComponent(u);
+        var response;
+        try {
+          response = await fetch(url, { method: "GET" });
+        } catch (err) {
+          showPlayerMenuMessageTimed(msg, "Load failed.", true);
+          return;
+        }
+        if (response.status === 404) {
+          showPlayerMenuMessageTimed(msg, "No save found.", true);
+          return;
+        }
+        if (!response.ok) {
+          showPlayerMenuMessageTimed(msg, "Load failed.", true);
+          return;
+        }
+        var data = {};
+        try {
+          data = await response.json();
+        } catch (err) {
+          data = {};
+        }
+        if (statHigh) {
+          statHigh.textContent =
+            data.highScore != null && data.highScore !== "" ? String(data.highScore) : "--";
+        }
+        if (statWpm) {
+          statWpm.textContent =
+            data.bestWPM != null && data.bestWPM !== "" ? String(data.bestWPM) : "--";
+        }
+        if (statAcc) {
+          statAcc.textContent = playerMenuAccuracyLabel(data.avgAccuracy);
+        }
+        showPlayerMenuMessageTimed(msg, "Loaded.", false);
       });
     }
 
@@ -583,6 +757,7 @@
     wireExitButtons();
     wireRegisterForm();
     wireLoginForm();
+    wireMainMenu();
     wirePlayerMenu();
     wireDifficultyScreen();
     wireHighscoresPage();
