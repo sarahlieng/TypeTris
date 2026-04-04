@@ -1,8 +1,27 @@
 package typetris.ui;
 
-import java.awt.*;
-import javax.swing.*;
-import javax.swing.border.*;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Insets;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 
 /**
  * Eight-step HOW TO PLAY flow matching the web
@@ -20,19 +39,18 @@ final class InstructionsScreens {
     private static final int GAP_AFTER_TITLE = 10;
     /** Space between stacked sections. */
     private static final int GAP_SECTION = 12;
+    /** Max width for tutorial text blocks so lines wrap readably (centered in scroll view). */
+    private static final int INSTRUCTIONS_CONTENT_W = 480;
 
     private InstructionsScreens() {
     }
 
-    /**
-     * BoxLayout stretches children oddly without a bounded max height; keep full
-     * width.
-     */
-    private static void bindFullWidth(JComponent c) {
+    /** Cap width so body text and cards don’t span the whole window. */
+    private static void capInstructionWidth(JComponent c) {
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
         Dimension d = c.getPreferredSize();
-        int h = Math.max(d.height, 32);
-        c.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
+        int h = (c instanceof JTextArea) ? Integer.MAX_VALUE : Math.max(d.height, 32);
+        c.setMaximumSize(new Dimension(INSTRUCTIONS_CONTENT_W, h));
     }
 
     static JPanel createWizard(Runnable backToMenu) {
@@ -41,8 +59,8 @@ final class InstructionsScreens {
 
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-        JButton menuBack = new JButton("← Back");
-        styleNavButton(menuBack, false);
+        JButton menuBack = new JButton("Back");
+        UiButtonStyles.applyBack(menuBack);
         menuBack.addActionListener(e -> backToMenu.run());
         header.add(menuBack, BorderLayout.WEST);
 
@@ -86,8 +104,8 @@ final class InstructionsScreens {
 
         JButton prev = new JButton("Previous");
         JButton next = new JButton("Next");
-        styleNavButton(prev, false);
-        styleNavButton(next, true);
+        UiButtonStyles.applySecondary(prev);
+        UiButtonStyles.applyPrimary(next);
 
         JPanel nav = new JPanel(new BorderLayout(12, 0));
         nav.setOpaque(false);
@@ -148,120 +166,98 @@ final class InstructionsScreens {
         return sp;
     }
 
-    private static void styleNavButton(JButton b, boolean primary) {
-        b.setFont(TypeTrisTheme.label(10f, Font.BOLD));
-        b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setContentAreaFilled(true);
-        if (primary) {
-            b.setBackground(TypeTrisTheme.PRIMARY_CONTAINER);
-            b.setForeground(TypeTrisTheme.ON_PRIMARY);
-        } else {
-            b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-            b.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        }
-        b.setBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
-                        BorderFactory.createEmptyBorder(6, 12, 6, 12)));
-        if (primary) {
-            ButtonRolloverSupport.install(b, TypeTrisTheme.PRIMARY_CONTAINER);
-        } else {
-            ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-        }
-    }
-
     private static JPanel buildPage(int i) {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBorder(new EmptyBorder(12, 16, 16, 16));
-        p.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
+        JPanel inner = new JPanel();
+        inner.setLayout(new BoxLayout(inner, BoxLayout.Y_AXIS));
+        inner.setBorder(new EmptyBorder(12, 16, 16, 16));
+        inner.setOpaque(false);
+        inner.setMaximumSize(new Dimension(INSTRUCTIONS_CONTENT_W, Integer.MAX_VALUE));
 
         JLabel kicker = kickerLabel("TUTORIAL " + (i + 1));
-        p.add(kicker);
-        p.add(Box.createVerticalStrut(6));
+        inner.add(kicker);
+        inner.add(Box.createVerticalStrut(6));
 
         switch (i) {
             case 0 -> {
-                p.add(titleLabel("Welcome to TypeTris!"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(callout(
+                inner.add(titleLabel("Welcome to TypeTris!"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(callout(
                         "THE BASICS OF TYPING",
                         "When blocks fall, words appear on them. Type the words correctly before the block lands."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(
                         body(
                                 "From the main menu you can register or log in, then use Start game to pick a tier and "
                                         + "sub-level. Parent/teacher tools use PIN 2212 (course demo)."));
             }
             case 1 -> {
-                p.add(titleLabel("Placing blocks"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(body(
+                inner.add(titleLabel("Placing blocks"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(body(
                         "Type the word on a falling block correctly to unlock its controls. Once you've typed the word "
                                 + "accurately, you can rotate the block and move it left or right to position it on the "
                                 + "board. Build complete rows and keep your stack low."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(twoCallouts("ACTION", "TYPE WORD", "ACTION", "POSITION"));
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(twoCallouts("ACTION", "TYPE WORD", "ACTION", "POSITION"));
             }
             case 2 -> {
-                p.add(titleLabel("Clearing lines"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(body(
+                inner.add(titleLabel("Clearing lines"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(body(
                         "Fill complete horizontal rows to clear them and increase your score. "
                                 + "More lines at once means a bigger bonus. Clearing four lines at once is the classic "
                                 + "\"Tetris\" moment."));
             }
             case 3 -> {
-                p.add(titleLabel("Controls"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(body(
+                inner.add(titleLabel("Controls"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(body(
                         "Type the word correctly to unlock block controls. Then use arrow keys: Left/Right to move, "
                                 + "Up to rotate clockwise, Down to rotate counter-clockwise. Press Space to hard-drop "
                                 + "and lock the piece where it lands."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(twoCallouts("Step 1", "TYPE", "Step 2", "MOVE"));
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(twoCallouts("Step 1", "TYPE", "Step 2", "MOVE"));
             }
             case 4 -> {
-                p.add(titleLabel("Game over"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(body(
+                inner.add(titleLabel("Game over"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(body(
                         "If blocks stack to the top of the board, the game ends. Type quickly and accurately to survive "
                                 + "the increasing fall speed as you clear lines."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(twoCallouts("THREAT LEVEL", "CRITICAL", "OBJECTIVE", "SURVIVE"));
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(twoCallouts("THREAT LEVEL", "CRITICAL", "OBJECTIVE", "SURVIVE"));
             }
             case 5 -> {
-                p.add(titleLabel("Levels & difficulty"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(calloutBox(
+                inner.add(titleLabel("Levels & difficulty"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(calloutBox(
                         "Blocks fall faster and words get longer as you progress in a run. Each tier (Easy / Medium / "
                                 + "Hard) and sub-level pushes your typing further."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(threeStats("BASE SPEED", "Tier set", "RUN LEVEL", "HUD ↑", "MULTIPLIER", "Streak"));
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(threeStats("BASE SPEED", "Tier set", "RUN LEVEL", "HUD ↑", "MULTIPLIER", "Streak"));
             }
             case 6 -> {
-                p.add(titleLabel("Power-up blocks"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(body(
+                inner.add(titleLabel("Power-up blocks"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(body(
                         "In the game, type five words in a row with zero mistakes to earn a power-up charge. "
                                 + "Spend a charge from the gameplay bar (or press 1 / 2 / 3) to activate an effect."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(
                         stripCard(
                                 "T",
                                 TypeTrisTheme.PRIMARY,
                                 "TIME FREEZE",
                                 "Slows or pauses the drop briefly so you can finish typing or position the piece."));
-                p.add(Box.createVerticalStrut(8));
-                p.add(
+                inner.add(Box.createVerticalStrut(8));
+                inner.add(
                         stripCard(
                                 "E",
                                 TypeTrisTheme.TERTIARY,
                                 "EASY WORDS",
                                 "Temporarily uses shorter or simpler words so you can recover under pressure."));
-                p.add(Box.createVerticalStrut(8));
-                p.add(
+                inner.add(Box.createVerticalStrut(8));
+                inner.add(
                         stripCard(
                                 "B",
                                 TypeTrisTheme.ERROR,
@@ -269,30 +265,38 @@ final class InstructionsScreens {
                                 "Clears extra nearby cells when you lock the piece, carving a path through the stack."));
             }
             case 7 -> {
-                p.add(titleLabel("Scoring"));
-                p.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
-                p.add(calloutBox(
+                inner.add(titleLabel("Scoring"));
+                inner.add(Box.createVerticalStrut(GAP_AFTER_TITLE));
+                inner.add(calloutBox(
                         "Points for every correct word. Line-clear bonuses scale with how many rows you clear at once, "
                                 + "multiplied by your current streak multiplier."));
-                p.add(Box.createVerticalStrut(GAP_SECTION));
-                p.add(
+                inner.add(Box.createVerticalStrut(GAP_SECTION));
+                inner.add(
                         stripCard(
                                 "S",
                                 TypeTrisTheme.PRIMARY.darker(),
                                 "SPEED BONUS",
                                 "Faster play and higher tiers increase pressure; big clears reward you when you keep up."));
-                p.add(Box.createVerticalStrut(8));
-                p.add(
+                inner.add(Box.createVerticalStrut(8));
+                inner.add(
                         stripCard(
                                 "A",
                                 TypeTrisTheme.SECONDARY,
                                 "ACCURACY & STREAK",
                                 "Clean typing builds your line streak and raises the combo multiplier on the HUD."));
             }
-            default -> p.add(body(""));
+            default -> inner.add(body(""));
         }
-        p.add(Box.createVerticalGlue());
-        return p;
+        inner.add(Box.createVerticalGlue());
+
+        JPanel shell = new JPanel();
+        shell.setLayout(new BoxLayout(shell, BoxLayout.X_AXIS));
+        shell.setOpaque(true);
+        shell.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
+        shell.add(Box.createHorizontalGlue());
+        shell.add(inner);
+        shell.add(Box.createHorizontalGlue());
+        return shell;
     }
 
     private static JLabel kickerLabel(String text) {
@@ -300,6 +304,7 @@ final class InstructionsScreens {
         l.setFont(TypeTrisTheme.label(10f, Font.BOLD));
         l.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        capInstructionWidth(l);
         return l;
     }
 
@@ -308,6 +313,7 @@ final class InstructionsScreens {
         l.setFont(TypeTrisTheme.headline(20f, Font.BOLD));
         l.setForeground(TypeTrisTheme.PRIMARY);
         l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        capInstructionWidth(l);
         return l;
     }
 
@@ -321,10 +327,12 @@ final class InstructionsScreens {
         a.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
         a.setBorder(new EmptyBorder(0, 0, 0, 0));
         a.setAlignmentX(Component.LEFT_ALIGNMENT);
-        a.setColumns(32);
-        int estLines = Math.max(2, 1 + text.length() / 52);
-        a.setRows(Math.min(14, estLines));
-        bindFullWidth(a);
+        a.setRows(0);
+        a.setColumns(0);
+        a.setSize(INSTRUCTIONS_CONTENT_W, Short.MAX_VALUE);
+        Dimension pref = a.getPreferredSize();
+        a.setPreferredSize(new Dimension(INSTRUCTIONS_CONTENT_W, pref.height));
+        a.setMaximumSize(new Dimension(INSTRUCTIONS_CONTENT_W, Integer.MAX_VALUE));
         return a;
     }
 
@@ -342,7 +350,7 @@ final class InstructionsScreens {
         wrap.add(h, BorderLayout.NORTH);
         JTextArea t = body(paragraph);
         wrap.add(t, BorderLayout.CENTER);
-        bindFullWidth(wrap);
+        capInstructionWidth(wrap);
         return wrap;
     }
 
@@ -355,7 +363,7 @@ final class InstructionsScreens {
                         new LineBorder(TypeTrisTheme.SECONDARY, 2),
                         new EmptyBorder(14, 16, 14, 16)));
         wrap.add(body(paragraph), BorderLayout.CENTER);
-        bindFullWidth(wrap);
+        capInstructionWidth(wrap);
         return wrap;
     }
 
@@ -364,7 +372,7 @@ final class InstructionsScreens {
         row.setOpaque(false);
         row.add(statTile(a1, v1, TypeTrisTheme.SECONDARY));
         row.add(statTile(a2, v2, TypeTrisTheme.PRIMARY));
-        bindFullWidth(row);
+        capInstructionWidth(row);
         return row;
     }
 
@@ -423,7 +431,7 @@ final class InstructionsScreens {
         row.add(miniStat(l1, v1, false));
         row.add(miniStat(l2, v2, true));
         row.add(miniStat(l3, v3, false));
-        bindFullWidth(row);
+        capInstructionWidth(row);
         return row;
     }
 
@@ -484,14 +492,17 @@ final class InstructionsScreens {
         h.setForeground(TypeTrisTheme.ON_SURFACE);
         JTextArea t = body(blurb);
         t.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
-        t.setRows(Math.max(2, 1 + blurb.length() / 48));
+        t.setSize(INSTRUCTIONS_CONTENT_W - 56, Short.MAX_VALUE);
+        Dimension tp = t.getPreferredSize();
+        t.setPreferredSize(new Dimension(INSTRUCTIONS_CONTENT_W - 56, tp.height));
+        t.setMaximumSize(new Dimension(INSTRUCTIONS_CONTENT_W - 56, Integer.MAX_VALUE));
         col.add(h);
         col.add(Box.createVerticalStrut(4));
         col.add(t);
 
         row.add(glyphBox, BorderLayout.WEST);
         row.add(col, BorderLayout.CENTER);
-        bindFullWidth(row);
+        capInstructionWidth(row);
         return row;
     }
 }

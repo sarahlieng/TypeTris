@@ -393,9 +393,17 @@ public final class AuthRepository {
                 SET high_score = 0, best_wpm = 0, avg_accuracy = 0.0, games_played = 0,
                     avg_wpm = 0.0, total_errors = 0, total_play_time_ms = 0, max_level = 0, words_typed = 0
                 """;
-        try (Connection c = DriverManager.getConnection(jdbcUrl);
-             PreparedStatement ps = c.prepareStatement(sql)) {
-            return ps.executeUpdate();
+        try (Connection c = DriverManager.getConnection(jdbcUrl)) {
+            int total;
+            try (var st = c.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM users")) {
+                rs.next();
+                total = rs.getInt(1);
+            }
+            try (PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.executeUpdate();
+            }
+            return total;
         }
     }
 

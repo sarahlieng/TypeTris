@@ -3,12 +3,15 @@ package typetris.gameplay;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
@@ -20,13 +23,15 @@ import java.util.function.Consumer;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
@@ -48,6 +53,7 @@ import typetris.ui.ButtonRolloverSupport;
 import typetris.ui.ClientPrefs;
 import typetris.ui.Screens;
 import typetris.ui.TypeTrisTheme;
+import typetris.ui.UiButtonStyles;
  
 /**
  * Swing gameplay screen: left HUD, grid canvas, typing row, top action bar, and pause overlay.
@@ -60,6 +66,9 @@ public final class GameplayPanel extends JPanel {
 
     /** Grid cell size in pixels (must match {@link BoardCanvas} drawing). */
     private static final int BOARD_CELL_PX = 28;
+
+    /** High-contrast label on neon power-up chips (cyan / green / pink). */
+    private static final Color POWER_CHIP_TEXT = new Color(0x12141a);
 
     /**
      * Fixed size of the layered gameplay band. Tall enough for the full grid ({@link GameplayModel#ROWS}
@@ -103,9 +112,6 @@ public final class GameplayPanel extends JPanel {
     private final JLabel hudAcc = new JLabel("100%");
     private final JLabel hudLevel = new JLabel("1");
     private final JLabel hudLives = new JLabel("\u2665".repeat(GameplayModel.STARTING_LIVES));
-    private final JProgressBar levelBar = new JProgressBar(0, 100);
-    // CHANGE 2: new field — mirrors <p id="falling-word-hint"> below the playfield in gameplay.html.
-    private final JLabel fallingWordHint = new JLabel(" ");
     /** Semi-transparent layer over the play area while {@link GameplayModel#isPaused()}. */
     private final JPanel pauseOverlay = new JPanel();
     /** Prevents {@link DocumentListener} recursion when the model rewrites the typing field. */
@@ -239,27 +245,30 @@ public final class GameplayPanel extends JPanel {
         JPanel playCol = new JPanel(new BorderLayout());
         playCol.setOpaque(false);
         Dimension boardSize =
-                new Dimension(GameplayModel.COLS * BOARD_CELL_PX + 4, GameplayModel.ROWS * BOARD_CELL_PX + 4);
+                new Dimension(GameplayModel.COLS * BOARD_CELL_PX, GameplayModel.ROWS * BOARD_CELL_PX);
         board.setPreferredSize(boardSize);
         board.setMinimumSize(boardSize);
+        board.setMaximumSize(boardSize);
         board.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 GameplayPanel.this.requestFocusInWindow();
             }
         });
-        playCol.add(board, BorderLayout.CENTER);
+        JPanel boardWrap = new JPanel(new GridBagLayout());
+        boardWrap.setOpaque(false);
+        GridBagConstraints bgbc = new GridBagConstraints();
+        bgbc.gridx = 0;
+        bgbc.gridy = 0;
+        bgbc.weightx = 1;
+        bgbc.weighty = 1;
+        bgbc.anchor = GridBagConstraints.CENTER;
+        boardWrap.add(board, bgbc);
+        playCol.add(boardWrap, BorderLayout.CENTER);
  
-        // CHANGE 4: wrap fallingWordHint + typingRow together in belowBoard so both can sit
-        // south of the board. Previously typingRow went straight into playCol SOUTH and
-        // fallingWordHint did not exist. Mirrors <p id="falling-word-hint"> + typing area in HTML.
         JPanel belowBoard = new JPanel(new BorderLayout(0, 4));
         belowBoard.setOpaque(false);
-        fallingWordHint.setFont(TypeTrisTheme.label(10f, Font.BOLD));
-        fallingWordHint.setForeground(TypeTrisTheme.PRIMARY);
-        fallingWordHint.setHorizontalAlignment(JLabel.CENTER);
-        belowBoard.add(fallingWordHint, BorderLayout.NORTH);
- 
+
         JPanel typingRow = new JPanel(new BorderLayout(8, 4));
         typingRow.setOpaque(false);
         typing.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
@@ -422,21 +431,26 @@ public final class GameplayPanel extends JPanel {
  
         center.add(playCol, BorderLayout.CENTER);
  
-        // Top bar: power-ups (instructions: Time freeze, Easy words, Block buster) + pause.
+        // Top bar: power-ups + pause (slightly separated from playfield like a toolbar)
         JPanel topBar = new JPanel(new BorderLayout(8, 0));
-        topBar.setOpaque(false);
-        JPanel powerRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        topBar.setOpaque(true);
+        topBar.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        topBar.setBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 1, 0, TypeTrisTheme.OUTLINE_VARIANT),
+                        new EmptyBorder(8, 10, 10, 10)));
+        JPanel powerRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         powerRow.setOpaque(false);
         powerStatusLabel.setFont(TypeTrisTheme.label(10f, Font.PLAIN));
         powerStatusLabel.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
         powerRow.add(powerStatusLabel);
-        powerFreezeBtn = compactPowerButton("Freeze (1)", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
+        powerFreezeBtn = compactPowerButton("Freeze (1)", TypeTrisTheme.PRIMARY_CONTAINER, POWER_CHIP_TEXT);
         powerFreezeBtn.setToolTipText("Time freeze — slows drops for a few seconds (matches instructions).");
         powerFreezeBtn.addActionListener(e -> tryActivatePowerup(1));
-        powerEasyBtn = compactPowerButton("Easy words (2)", TypeTrisTheme.TERTIARY, new Color(0x0d2a00));
+        powerEasyBtn = compactPowerButton("Easy words (2)", TypeTrisTheme.TERTIARY, POWER_CHIP_TEXT);
         powerEasyBtn.setToolTipText("Easy words — next spawns use shorter words.");
         powerEasyBtn.addActionListener(e -> tryActivatePowerup(2));
-        powerBlastBtn = compactPowerButton("Blast (3)", TypeTrisTheme.ERROR, Color.WHITE);
+        powerBlastBtn = compactPowerButton("Blast (3)", TypeTrisTheme.ERROR, POWER_CHIP_TEXT);
         powerBlastBtn.setToolTipText("Block buster — next lock clears nearby stack cells.");
         powerBlastBtn.addActionListener(e -> tryActivatePowerup(3));
         powerRow.add(powerFreezeBtn);
@@ -446,7 +460,9 @@ public final class GameplayPanel extends JPanel {
 
         JPanel topEast = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         topEast.setOpaque(false);
-        JButton pauseBtn = neonButton("Pause (Esc)", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
+        JButton pauseBtn = new JButton("Pause");
+        UiButtonStyles.applyPrimary(pauseBtn);
+        pauseBtn.setToolTipText("Pause or resume (Esc)");
         pauseBtn.addActionListener(e -> {
             model.togglePause();
             pauseOverlay.setVisible(model.isPaused());
@@ -489,12 +505,39 @@ public final class GameplayPanel extends JPanel {
 
         // HUD already refreshed by startRound() so fireHud()
  
-        // overlay is added in wrapCenter before children here
-        pauseOverlay.setLayout(new GridLayout(0, 1, 0, 12));
-        pauseOverlay.setBackground(new Color(0, 0, 0, 200));
+        // dim overlay + centered card (added after wrapCenter registers the overlay layer)
+        pauseOverlay.setLayout(new GridBagLayout());
+        pauseOverlay.setBackground(new Color(15, 18, 24, 230));
         pauseOverlay.setOpaque(true);
         pauseOverlay.setVisible(false);
-        JButton resume = neonButton("Resume", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
+
+        JPanel pauseCard = new JPanel();
+        pauseCard.setLayout(new BoxLayout(pauseCard, BoxLayout.Y_AXIS));
+        pauseCard.setOpaque(true);
+        pauseCard.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        pauseCard.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.PRIMARY, 2),
+                        new EmptyBorder(28, 44, 32, 44)));
+
+        JLabel pausedHead = new JLabel("PAUSED");
+        pausedHead.setFont(TypeTrisTheme.headline(28f, Font.BOLD));
+        pausedHead.setForeground(TypeTrisTheme.PRIMARY);
+        pausedHead.setAlignmentX(Component.CENTER_ALIGNMENT);
+        pauseCard.add(pausedHead);
+        pauseCard.add(Box.createVerticalStrut(10));
+
+        JLabel pausedSub = new JLabel("Music is muted until you resume.");
+        pausedSub.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        pausedSub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        pausedSub.setAlignmentX(Component.CENTER_ALIGNMENT);
+        pauseCard.add(pausedSub);
+        pauseCard.add(Box.createVerticalStrut(28));
+
+        JButton resume = new JButton("Resume game");
+        UiButtonStyles.applyPrimary(resume);
+        resume.setAlignmentX(Component.CENTER_ALIGNMENT);
+        resume.setMaximumSize(new Dimension(240, 46));
         resume.addActionListener(e -> {
             model.setPaused(false);
             pauseOverlay.setVisible(false);
@@ -502,20 +545,58 @@ public final class GameplayPanel extends JPanel {
             refocusTypingIfNeeded();
             syncHud();
         });
-        pauseOverlay.add(resume);
-        JButton pauseQuit = neonButton("Quit Game", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE_VARIANT);
+        pauseCard.add(resume);
+        pauseCard.add(Box.createVerticalStrut(12));
+
+        JButton pauseQuit = new JButton("Quit to menu");
+        UiButtonStyles.applySecondary(pauseQuit);
+        pauseQuit.setAlignmentX(Component.CENTER_ALIGNMENT);
+        pauseQuit.setMaximumSize(new Dimension(240, 42));
         pauseQuit.addActionListener(e -> quitWithUnsavedWarning());
-        pauseOverlay.add(pauseQuit);
+        pauseCard.add(pauseQuit);
+
+        GridBagConstraints og = new GridBagConstraints();
+        og.gridx = 0;
+        og.gridy = 0;
+        og.weightx = 1;
+        og.weighty = 1;
+        og.anchor = GridBagConstraints.CENTER;
+        og.insets = new Insets(0, 0, 0, 0);
+        pauseOverlay.add(pauseCard, og);
     }
 
     private void quitWithUnsavedWarning() {
-        int r = JOptionPane.showConfirmDialog(
-                this,
-                "Your progress will not be saved.",
-                "Quit game",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-        if (r == JOptionPane.OK_OPTION) {
+        JPanel wrap = new JPanel(new BorderLayout(0, 12));
+        wrap.setOpaque(false);
+        JLabel head = new JLabel("Quit to menu?");
+        head.setFont(TypeTrisTheme.headline(18f, Font.BOLD));
+        head.setForeground(TypeTrisTheme.ON_SURFACE);
+        JTextArea body = new JTextArea(
+                "This run won’t update your best score for this level. You can start again anytime from the player menu.");
+        body.setEditable(false);
+        body.setOpaque(false);
+        body.setLineWrap(true);
+        body.setWrapStyleWord(true);
+        body.setColumns(26);
+        body.setRows(3);
+        body.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        body.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        body.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        wrap.add(head, BorderLayout.NORTH);
+        wrap.add(body, BorderLayout.CENTER);
+
+        String[] opts = { "Quit to menu", "Keep playing" };
+        int r =
+                JOptionPane.showOptionDialog(
+                        this,
+                        wrap,
+                        "Quit game",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.WARNING_MESSAGE,
+                        null,
+                        opts,
+                        opts[1]);
+        if (r == 0) {
             navigateReplaceCard.accept(Screens.PLAYER);
         }
     }
@@ -540,22 +621,6 @@ public final class GameplayPanel extends JPanel {
     }
  
     /** Small bordered control matching the neon / high-contrast web buttons. */
-    private JButton neonButton(String text, Color bg, Color fg) {
-        JButton b = new JButton(text);
-        b.setBackground(bg);
-        b.setForeground(fg);
-        b.setFont(TypeTrisTheme.label(11f, Font.BOLD));
-        b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setContentAreaFilled(true);
-        b.setBorder(
-                BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
-                        new EmptyBorder(6, 14, 6, 14)));
-        ButtonRolloverSupport.install(b, bg);
-        return b;
-    }
-
     private JButton compactPowerButton(String text, Color bg, Color fg) {
         JButton b = new JButton(text);
         b.setBackground(bg);
@@ -627,59 +692,119 @@ public final class GameplayPanel extends JPanel {
         p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
         p.setOpaque(true);
         p.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-        p.setBorder(new LineBorder(TypeTrisTheme.PRIMARY.darker(), 1));
- 
+        p.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(12, 14, 14, 14)));
+
         p.add(hudBlock("SCORE", hudScore, 28f));
         p.add(javax.swing.Box.createVerticalStrut(8));
         p.add(hudBlock("BEST SCORE", hudBest, 22f));
         p.add(javax.swing.Box.createVerticalStrut(8));
         p.add(hudBlock("WORDS PER MINUTE", hudWpm, 24f));
-        p.add(hudTiny(hudWpmOverall));
+        p.add(Box.createVerticalGlue());
 
-        p.add(javax.swing.Box.createVerticalStrut(10));
-        JLabel statsHead = new JLabel("SESSION STATS");
-        statsHead.setFont(TypeTrisTheme.label(10f, Font.BOLD));
-        statsHead.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        p.add(statsHead);
-        p.add(javax.swing.Box.createVerticalStrut(4));
-        JPanel statGrid = new JPanel(new GridLayout(0, 2, 6, 2));
-        statGrid.setOpaque(false);
-        styleHudStatPair(statGrid, "Avg WPM", hudStatAvgWpm);
-        styleHudStatPair(statGrid, "Peak WPM", hudStatPeakWpm);
-        styleHudStatPair(statGrid, "Accuracy", hudStatAcc);
-        styleHudStatPair(statGrid, "Errors", hudStatErrors);
-        styleHudStatPair(statGrid, "Time", hudStatTime);
-        styleHudStatPair(statGrid, "High score", hudStatHigh);
-        styleHudStatPair(statGrid, "Level", hudStatLevel);
-        styleHudStatPair(statGrid, "Words typed", hudStatWords);
-        p.add(statGrid);
+        JPanel bottomHud = new JPanel();
+        bottomHud.setLayout(new BoxLayout(bottomHud, BoxLayout.Y_AXIS));
+        bottomHud.setOpaque(false);
+        bottomHud.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hudTiny(hudWpmOverall);
+        hudWpmOverall.setHorizontalAlignment(SwingConstants.LEADING);
+        bottomHud.add(hudWpmOverall);
+        bottomHud.add(Box.createVerticalStrut(10));
+        JPanel sessionBlock = buildSessionStatsSection();
+        sessionBlock.setAlignmentX(Component.LEFT_ALIGNMENT);
+        bottomHud.add(sessionBlock);
+
+        p.add(bottomHud);
 
         return p;
     }
 
-    private void styleHudStatPair(JPanel grid, String title, JLabel value) {
+    /** Session metrics in a compact inset card (labels left, values right; snug size, left-aligned in HUD). */
+    private JPanel buildSessionStatsSection() {
+        JPanel wrap = new JPanel();
+        wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
+        wrap.setOpaque(false);
+        wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel statsHead = new JLabel("This session");
+        statsHead.setFont(TypeTrisTheme.label(9f, Font.BOLD));
+        statsHead.setForeground(TypeTrisTheme.TERTIARY);
+        statsHead.setHorizontalAlignment(SwingConstants.LEADING);
+        statsHead.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrap.add(statsHead);
+        wrap.add(Box.createVerticalStrut(6));
+
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setOpaque(true);
+        card.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
+        card.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(6, 8, 8, 8)));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        GridBagConstraints cl = new GridBagConstraints();
+        cl.gridx = 0;
+        cl.anchor = GridBagConstraints.LINE_START;
+        cl.insets = new Insets(2, 0, 2, 10);
+        cl.weightx = 0;
+        cl.weighty = 0;
+        GridBagConstraints cv = new GridBagConstraints();
+        cv.gridx = 1;
+        cv.anchor = GridBagConstraints.LINE_END;
+        cv.insets = new Insets(2, 0, 2, 0);
+        cv.weightx = 0;
+        cv.weighty = 0;
+        cv.fill = GridBagConstraints.NONE;
+
+        int row = 0;
+        addSessionStatRow(card, cl, cv, row++, "Avg WPM", hudStatAvgWpm);
+        addSessionStatRow(card, cl, cv, row++, "Peak WPM", hudStatPeakWpm);
+        addSessionStatRow(card, cl, cv, row++, "Accuracy", hudStatAcc);
+        addSessionStatRow(card, cl, cv, row++, "Errors", hudStatErrors);
+        addSessionStatRow(card, cl, cv, row++, "Time", hudStatTime);
+        addSessionStatRow(card, cl, cv, row++, "High score", hudStatHigh);
+        addSessionStatRow(card, cl, cv, row++, "Level", hudStatLevel);
+        addSessionStatRow(card, cl, cv, row++, "Words typed", hudStatWords);
+
+        Dimension cp = card.getPreferredSize();
+        card.setPreferredSize(cp);
+        card.setMaximumSize(cp);
+        wrap.add(card);
+
+        Dimension wp = wrap.getPreferredSize();
+        wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, wp.height));
+        return wrap;
+    }
+
+    private static void addSessionStatRow(
+            JPanel card, GridBagConstraints cl, GridBagConstraints cv, int row, String title, JLabel value) {
         JLabel t = new JLabel(title);
-        t.setFont(TypeTrisTheme.label(9f, Font.PLAIN));
+        t.setFont(TypeTrisTheme.body(10f, Font.PLAIN));
         t.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        value.setFont(TypeTrisTheme.label(10f, Font.BOLD));
+        value.setFont(TypeTrisTheme.body(12f, Font.BOLD));
         value.setForeground(TypeTrisTheme.PRIMARY);
-        grid.add(t);
-        grid.add(value);
+        cl.gridy = row;
+        cv.gridy = row;
+        card.add(t, cl);
+        card.add(value, cv);
     }
  
     /**
-     * Right column panel matching the col-span-3 right section in gameplay.html.
-     * Contains LEVEL &amp; PROGRESS (#hud-current-level, #hud-lines-cleared, #hud-level-progress-fill)
-     * and COMBO &amp; STREAK (#hud-streak, #hud-combo-multiplier, #hud-accuracy).
-     * Previously these metrics were all in buildHudColumn() on the left.
+     * Right column: lives, level / lines cleared, then combo &amp; streak (matches gameplay.html right HUD).
      */
     private JPanel buildRightColumn() {
         JPanel p = new JPanel();
         p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
         p.setOpaque(true);
         p.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
-        p.setBorder(new LineBorder(TypeTrisTheme.PRIMARY.darker(), 1));
- 
+        p.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(12, 14, 14, 14)));
+
         p.add(hudBlock("LIVES", hudLives, 28f));
         p.add(javax.swing.Box.createVerticalStrut(8));
 
@@ -688,16 +813,6 @@ public final class GameplayPanel extends JPanel {
         p.add(javax.swing.Box.createVerticalStrut(8));
         p.add(hudBlock("LINES CLEARED:", hudLines, 22f));
         p.add(javax.swing.Box.createVerticalStrut(8));
-        levelBar.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
-        levelBar.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
-        levelBar.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT));
-        p.add(levelBar);
-        JLabel nextLvl = new JLabel("NEXT LEVEL");
-        nextLvl.setFont(TypeTrisTheme.label(9f, Font.BOLD));
-        nextLvl.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        p.add(nextLvl);
- 
-        p.add(javax.swing.Box.createVerticalStrut(12));
  
         // COMBO & STREAK section (#hud-streak, #hud-combo-multiplier, #hud-accuracy)
         p.add(hudBlock("LINE STREAK:", hudStreak, 28f));
@@ -719,12 +834,18 @@ public final class GameplayPanel extends JPanel {
         value.setForeground(TypeTrisTheme.PRIMARY);
         b.add(t, BorderLayout.NORTH);
         b.add(value, BorderLayout.CENTER);
+        Dimension d = b.getPreferredSize();
+        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, d.height));
         return b;
     }
  
     private JLabel hudTiny(JLabel l) {
         l.setFont(TypeTrisTheme.label(11f, Font.PLAIN));
         l.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        l.setHorizontalAlignment(SwingConstants.LEADING);
+        Dimension d = l.getPreferredSize();
+        l.setMaximumSize(new Dimension(Integer.MAX_VALUE, d.height));
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
         return l;
     }
  
@@ -770,7 +891,6 @@ public final class GameplayPanel extends JPanel {
         hudMult.setText("x" + model.getMult());
         hudAcc.setText(model.accuracyPercent() + "%");
         hudLevel.setText(String.valueOf(model.runLevelFromLines()));
-        levelBar.setValue(model.levelProgressPercent());
         int lv = model.getLives();
         int lmax = model.getStartingLives();
         hudLives.setText("\u2665".repeat(Math.max(0, lv)) + "\u2661".repeat(Math.max(0, lmax - lv)));
@@ -785,8 +905,6 @@ public final class GameplayPanel extends JPanel {
         typing.setEnabled(!model.isPaused() && !model.isOver());
         GameplayModel.Piece pc = model.getPiece();
         if (pc != null && !model.isOver()) {
-            // CHANGE 10: populate fallingWordHint — mirrors #falling-word-hint in gameplay.html.
-            fallingWordHint.setText(model.fallingWordHint());
             if (!pc.unlocked) {
                 hintTyping.setText("Target: " + pc.word);
                 // Web spawnPiece: input.value = "". Keep field aligned with model when a new word spawns.
@@ -807,7 +925,6 @@ public final class GameplayPanel extends JPanel {
                 lastTypingTargetWord = null;
             }
         } else if (model.isOver()) {
-            fallingWordHint.setText("");
             hintTyping.setText("");
             lastTypingTargetWord = null;
             ignoreTypingDoc = true;
@@ -979,19 +1096,12 @@ public final class GameplayPanel extends JPanel {
  
             int w = GameplayModel.COLS * cell;
             int h = GameplayModel.ROWS * cell;
-            g2.setColor(TypeTrisTheme.OUTLINE_VARIANT.darker());
-            for (int c = 0; c <= GameplayModel.COLS; c++) {
-                g2.drawLine(c * cell, 0, c * cell, h);
-            }
-            for (int r = 0; r <= GameplayModel.ROWS; r++) {
-                g2.drawLine(0, r * cell, w, r * cell);
-            }
- 
+
             var grid = model.getGrid();
             for (int r = 0; r < GameplayModel.ROWS; r++) {
                 for (int c = 0; c < GameplayModel.COLS; c++) {
                     if (grid[r][c] != null) {
-                        drawCell(g2, c, r, String.valueOf(grid[r][c].ch()), TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY, false, false);
+                        drawCell(g2, c, r, String.valueOf(grid[r][c].ch()), TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
                     }
                 }
             }
@@ -1011,7 +1121,6 @@ public final class GameplayPanel extends JPanel {
                     boolean typed = pt.wi < pc.lastTypedLen;
                     Color bg = TypeTrisTheme.PRIMARY_CONTAINER;
                     Color fg = TypeTrisTheme.ON_PRIMARY;
-                    boolean unlocked = pc.unlocked;
                     if (wrong) {
                         bg = new Color(0x40, 0x10, 0x18);
                         fg = Color.WHITE;
@@ -1019,7 +1128,7 @@ public final class GameplayPanel extends JPanel {
                         bg = TypeTrisTheme.PRIMARY_CONTAINER.darker();
                         fg = TypeTrisTheme.SECONDARY;
                     }
-                    drawCell(g2, pc.col + pt.x, pc.row + pt.y, String.valueOf(pt.ch), bg, fg, unlocked, wrong);
+                    drawCell(g2, pc.col + pt.x, pc.row + pt.y, String.valueOf(pt.ch), bg, fg);
                 }
                 if (pc.word != null) {
                     g2.setFont(TypeTrisTheme.label(10f, Font.BOLD));
@@ -1029,26 +1138,34 @@ public final class GameplayPanel extends JPanel {
                     g2.drawString(pc.word, lx, ly + 14);
                 }
             }
+
+            g2.setStroke(new BasicStroke(1f));
+            Color faintGrid = new Color(
+                    TypeTrisTheme.OUTLINE_VARIANT.getRed(),
+                    TypeTrisTheme.OUTLINE_VARIANT.getGreen(),
+                    TypeTrisTheme.OUTLINE_VARIANT.getBlue(),
+                    64);
+            g2.setColor(faintGrid);
+            for (int c = 0; c <= GameplayModel.COLS; c++) {
+                int x = c * cell;
+                g2.drawLine(x, 0, x, h);
+            }
+            for (int r = 0; r <= GameplayModel.ROWS; r++) {
+                int y = r * cell;
+                g2.drawLine(0, y, w, y);
+            }
+
+            g2.setStroke(new BasicStroke(2f));
+            g2.setColor(TypeTrisTheme.PRIMARY);
+            g2.drawRect(0, 0, w - 1, h - 1);
         }
  
-        private void drawCell(Graphics2D g2, int col, int row, String ch, Color bg, Color fg, boolean unlocked, boolean wrong) {
-            int x = col * cell + 1;
-            int y = row * cell + 1;
-            int s = cell - 2;
+        private void drawCell(Graphics2D g2, int col, int row, String ch, Color bg, Color fg) {
+            int x = col * cell;
+            int y = row * cell;
+            int s = cell;
             g2.setColor(bg);
-            g2.fillRoundRect(x, y, s, s, 4, 4);
-            if (unlocked) {
-                g2.setColor(TypeTrisTheme.SECONDARY);
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(x, y, s, s, 4, 4);
-            } else if (wrong) {
-                g2.setColor(TypeTrisTheme.ERROR);
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(x, y, s, s, 4, 4);
-            } else {
-                g2.setColor(TypeTrisTheme.PRIMARY.darker());
-                g2.drawRoundRect(x, y, s, s, 4, 4);
-            }
+            g2.fillRect(x, y, s, s);
             g2.setColor(fg);
             g2.setFont(TypeTrisTheme.headline(14f, Font.BOLD));
             var fm = g2.getFontMetrics();
