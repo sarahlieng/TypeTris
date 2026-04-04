@@ -11,7 +11,10 @@ import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -81,6 +84,9 @@ public final class GameplayPanel extends JPanel {
     /** Snapshot for the game-over screen after {@link GameplayModel.Listener#onGameOver()}. */
     private int lastScore;
 
+    /** Last piece word we showed a typing prompt for (refocus typing when a new word spawns). */
+    private String lastTypingTargetWord;
+
     public GameplayPanel(
             AuthRepository auth,
             String username,
@@ -98,6 +104,7 @@ public final class GameplayPanel extends JPanel {
         setLayout(new BorderLayout(0, 0));
         setBackground(TypeTrisTheme.SURFACE);
         setOpaque(true);
+        setFocusable(true);
 
         // Model: tier/subLevel select fall speed and word length; best score seeds HUD “best”.
         int best = ClientPrefs.getBestScore(username, tier, subLevel);
@@ -114,6 +121,7 @@ public final class GameplayPanel extends JPanel {
 
             @Override
             public void onGameOver() {
+                if (model == null) return;
                 lastScore = model.getScore();
                 ClientPrefs.putBestScoreIfHigher(username, tier, subLevel, model.getScore());
                 // Clearing a sub-level unlocks the next within the same tier (matches web localStorage).
@@ -129,9 +137,9 @@ public final class GameplayPanel extends JPanel {
                 SwingUtilities.invokeLater(() -> navigateReplaceCard.accept(Screens.GAME_OVER));
             }
         });
-        model.startRound();
 
-        //Center: HUD | board + typing
+
+        // center HUD and board + typing
         JPanel center = new JPanel(new BorderLayout(16, 0));
         center.setOpaque(false);
         center.setBorder(new EmptyBorder(16, 16, 16, 16));
@@ -142,6 +150,12 @@ public final class GameplayPanel extends JPanel {
         JPanel playCol = new JPanel(new BorderLayout());
         playCol.setOpaque(false);
         board.setPreferredSize(new Dimension(GameplayModel.COLS * 28 + 4, GameplayModel.ROWS * 28 + 4));
+        board.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                GameplayPanel.this.requestFocusInWindow();
+            }
+        });
         playCol.add(board, BorderLayout.CENTER);
 
         JPanel typingRow = new JPanel(new BorderLayout(8, 4));
@@ -151,7 +165,8 @@ public final class GameplayPanel extends JPanel {
         typing.setCaretColor(TypeTrisTheme.PRIMARY);
         typing.setFont(TypeTrisTheme.body(18f, Font.PLAIN));
         typing.setBorder(new LineBorder(TypeTrisTheme.OUTLINE, 1));
-        // Force A–Z only and uppercase so the model always sees a single consistent alphabet.
+        typing.setHorizontalAlignment(JTextField.LEFT); // visually align to the left
+        // force A–Z only and uppercase so the model always sees a single consistent alphabet.
         ((AbstractDocument) typing.getDocument()).setDocumentFilter(new DocumentFilter() {
             @Override
             public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
@@ -173,16 +188,76 @@ public final class GameplayPanel extends JPanel {
                 super.replace(fb, offset, length, up.toString(), attrs);
             }
         });
+        // While the JTextField has focus it consumes arrows/space; web uses blur() after unlock. We transfer
+        // focus to this panel and also route arrows/space from the field when unlocked (gameplay.js).
+        typing.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (model == null || model.isOver() || model.isPaused()) {
+                    return;
+                }
+                GameplayModel.Piece pc = model.getPiece();
+                if (pc == null) {
+                    return;
+                }
+                // Always eat space in this field so it never inserts a character (web prevents default).
+                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    e.consume();
+                    if (pc.unlocked) {
+                        model.onSpace();
+                        board.repaint();
+                    }
+                    return;
+                }
+                if (!pc.unlocked) {
+                    return;
+                }
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_LEFT -> {
+                        e.consume();
+                        model.onArrowLeft();
+                    }
+                    case KeyEvent.VK_RIGHT -> {
+                        e.consume();
+                        model.onArrowRight();
+                    }
+                    case KeyEvent.VK_UP -> {
+                        e.consume();
+                        model.onArrowUp();
+                    }
+                    case KeyEvent.VK_DOWN -> {
+                        e.consume();
+                        model.onArrowDown();
+                    }
+                    default -> {
+                    }
+                }
+                board.repaint();
+            }
+        });
         // Pipe keystrokes into the model; model returns display string (prefix / masking) for the field.
         typing.getDocument().addDocumentListener(new DocumentListener() {
             private void upd() {
-                if (ignoreTypingDoc || model.isOver() || model.isPaused()) {
+                if (ignoreTypingDoc || model == null || model.isOver() || model.isPaused()) {
                     return;
                 }
+                GameplayModel.Piece pcBefore = model.getPiece();
+                if (pcBefore == null) {
+                    return;
+                }
+                boolean wasUnlocked = pcBefore.unlocked;
                 model.onTypingFieldChanged(typing.getText());
                 ignoreTypingDoc = true;
-                typing.setText(model.currentTypingDisplay());
+                String shown = model.currentTypingDisplay();
+                typing.setText(shown);
+                typing.setCaretPosition(shown.length());
                 ignoreTypingDoc = false;
+                GameplayModel.Piece pcAfter = model.getPiece();
+                if (pcAfter != null && pcAfter.unlocked && !wasUnlocked) {
+                    SwingUtilities.invokeLater(() -> {
+                        GameplayPanel.this.requestFocusInWindow();
+                    });
+                }
             }
 
             @Override
@@ -209,13 +284,16 @@ public final class GameplayPanel extends JPanel {
 
         center.add(playCol, BorderLayout.CENTER);
 
-        // Top bar: pause / options / stub save / quit
+        // show top bar with pause / options / stub save / quit buttons
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topBar.setOpaque(false);
         JButton pauseBtn = neonButton("Pause", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
         pauseBtn.addActionListener(e -> {
             model.togglePause();
             pauseOverlay.setVisible(model.isPaused());
+            if (!model.isPaused()) {
+                refocusTypingIfNeeded();
+            }
         });
         JButton optBtn = neonButton("Options", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
         optBtn.addActionListener(e -> navigateReplaceCard.accept(Screens.DIFFICULTY));
@@ -233,16 +311,19 @@ public final class GameplayPanel extends JPanel {
         layered.setPreferredSize(new Dimension(900, 560));
         wrapCenter(layered, topBar, center, pauseOverlay);
 
+        model.startRound(); // start round after UI is built
+
         installKeyboardActions();
+        installPlacementKeyListenerOnPanel();
         gameTimer = new Timer(16, e -> {
             model.tick(0.016);
             board.repaint();
         });
         gameTimer.start();
 
-        // HUD already refreshed by startRound() → fireHud(); avoid duplicate syncHud() before layout.
+        // HUD already refreshed by startRound() so fireHud()
 
-        // Note: overlay is added in wrapCenter before children here; mutating the same JPanel is OK on EDT.
+        // overlay is added in wrapCenter before children here
         pauseOverlay.setLayout(new GridLayout(0, 1, 0, 12));
         pauseOverlay.setBackground(new Color(0, 0, 0, 200));
         pauseOverlay.setOpaque(true);
@@ -251,6 +332,7 @@ public final class GameplayPanel extends JPanel {
         resume.addActionListener(e -> {
             model.setPaused(false);
             pauseOverlay.setVisible(false);
+            refocusTypingIfNeeded();
         });
         pauseOverlay.add(resume);
     }
@@ -356,56 +438,113 @@ public final class GameplayPanel extends JPanel {
         phaseLabel.setText(model.controlPhaseLabel());
         GameplayModel.Piece pc = model.getPiece();
         if (pc != null && !model.isOver()) {
-            hintTyping.setText("Target: " + pc.word);
+            if (!pc.unlocked) {
+                hintTyping.setText("Target: " + pc.word);
+                if (pc.word != null && !pc.word.equals(lastTypingTargetWord)) {
+                    lastTypingTargetWord = pc.word;
+                    SwingUtilities.invokeLater(() -> {
+                        typing.requestFocusInWindow();
+                        moveCaretToTypingEnd();
+                    });
+                }
+            } else {
+                hintTyping.setText("Arrows + Space — lock before the stack hits the top");
+            }
         } else if (model.isOver()) {
             hintTyping.setText("");
+            lastTypingTargetWord = null;
         }
     }
 
-    /** Arrow keys, space (soft drop), Esc (pause) — active even when the typing field has focus. */
+    /**
+     * Esc → pause only. Do not bind arrows/space here: {@code WHEN_IN_FOCUSED_WINDOW} runs before the
+     * typing field’s listeners and would consume arrow keys while the word is still locked, so the caret
+     * could not move (web only handles arrows after unlock — {@code gameplay.js}).
+     */
     private void installKeyboardActions() {
         int cond = JComponent.WHEN_IN_FOCUSED_WINDOW;
-        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "left");
-        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "right");
-        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "up");
-        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "down");
-        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "space");
         getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "esc");
-        getActionMap().put("left", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.onArrowLeft();
-            }
-        });
-        getActionMap().put("right", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.onArrowRight();
-            }
-        });
-        getActionMap().put("up", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.onArrowUp();
-            }
-        });
-        getActionMap().put("down", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.onArrowDown();
-            }
-        });
-        getActionMap().put("space", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                model.onSpace();
-            }
-        });
         getActionMap().put("esc", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if (model == null) {
+                    return;
+                }
                 model.togglePause();
                 pauseOverlay.setVisible(model.isPaused());
+                if (!model.isPaused()) {
+                    refocusTypingIfNeeded();
+                }
+            }
+        });
+    }
+
+    /**
+     * After unlock, focus may be on this panel (see document listener). Arrows/space must still move the
+     * piece; the typing field listener only runs when the field has focus.
+     */
+    private void installPlacementKeyListenerOnPanel() {
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (model == null || model.isOver() || model.isPaused()) {
+                    return;
+                }
+                GameplayModel.Piece pc = model.getPiece();
+                if (pc == null || !pc.unlocked) {
+                    return;
+                }
+                int k = e.getKeyCode();
+                if (k == KeyEvent.VK_SPACE) {
+                    e.consume();
+                    model.onSpace();
+                    board.repaint();
+                    return;
+                }
+                switch (k) {
+                    case KeyEvent.VK_LEFT -> {
+                        e.consume();
+                        model.onArrowLeft();
+                    }
+                    case KeyEvent.VK_RIGHT -> {
+                        e.consume();
+                        model.onArrowRight();
+                    }
+                    case KeyEvent.VK_UP -> {
+                        e.consume();
+                        model.onArrowUp();
+                    }
+                    case KeyEvent.VK_DOWN -> {
+                        e.consume();
+                        model.onArrowDown();
+                    }
+                    default -> {
+                        return;
+                    }
+                }
+                board.repaint();
+            }
+        });
+    }
+
+    /**
+     * After unpause, restore focus so keys work: typing field while the word is locked, otherwise this
+     * panel (placement keys do not run when focus stays on Resume / Pause).
+     */
+    private void refocusTypingIfNeeded() {
+        if (model == null || model.isOver() || model.isPaused()) {
+            return;
+        }
+        GameplayModel.Piece p = model.getPiece();
+        if (p == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            if (p.unlocked) {
+                GameplayPanel.this.requestFocusInWindow();
+            } else {
+                typing.requestFocusInWindow();
+                moveCaretToTypingEnd();
             }
         });
     }
@@ -413,6 +552,13 @@ public final class GameplayPanel extends JPanel {
     /** Call when this panel is shown so typing works immediately. */
     public void requestTypingFocus() {
         typing.requestFocusInWindow();
+        moveCaretToTypingEnd();
+    }
+
+    /** Keep caret at end of the typing field so the next character appends after programmatic {@code setText}. */
+    private void moveCaretToTypingEnd() {
+        String t = typing.getText();
+        typing.setCaretPosition(Math.max(0, t.length()));
     }
 
     /** Stop the tick timer when leaving the gameplay card to avoid background CPU use. */
