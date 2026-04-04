@@ -29,6 +29,7 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
@@ -41,6 +42,8 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
  
 import typetris.backend.AuthRepository;
+import typetris.backend.CompletedRunStats;
+import typetris.backend.PlayerAccount;
 import typetris.ui.ButtonRolloverSupport;
 import typetris.ui.ClientPrefs;
 import typetris.ui.Screens;
@@ -50,11 +53,22 @@ import typetris.ui.TypeTrisTheme;
  * Swing gameplay screen: left HUD, grid canvas, typing row, top action bar, and pause overlay.
  * <p>
  * Navigation uses {@link typetris.ui.Screens} card names via {@code navigateReplaceCard} (e.g. game over,
- * quit to player menu, options). Persists bests / unlocks through {@link typetris.ui.ClientPrefs} and
- * posts scores through {@link typetris.backend.AuthRepository#recordGameResult}.
+ * quit to player menu). Persists bests / unlocks through {@link typetris.ui.ClientPrefs} and
+* posts scores through {@link typetris.backend.AuthRepository#recordGameResult}.
  */
 public final class GameplayPanel extends JPanel {
- 
+
+    /** Grid cell size in pixels (must match {@link BoardCanvas} drawing). */
+    private static final int BOARD_CELL_PX = 28;
+
+    /**
+     * Fixed size of the layered gameplay band. Tall enough for the full grid ({@link GameplayModel#ROWS}
+     * rows × {@link #BOARD_CELL_PX}px), the word hint + typing row, top bar, and panel insets; otherwise
+     * {@link BorderLayout} shrinks the board and the bottom rows clip.
+     */
+    private static final int VIEWPORT_W = 900;
+    private static final int VIEWPORT_H = 680;
+
     private final AuthRepository auth;
     private final String username;
     private final String tier;
@@ -70,23 +84,39 @@ public final class GameplayPanel extends JPanel {
     private final JLabel hintTyping = new JLabel(" ");
     private final JLabel hudScore = new JLabel("0");
     private final JLabel hudBest = new JLabel("0");
+    /** Large left HUD: overall WPM ({@link GameplayModel#wpmOverall()}). */
     private final JLabel hudWpm = new JLabel("0");
-    // CHANGE 1: renamed hudWpmNow → hudWpmOverall; label text updated to "Overall: 0 WPM"
-    // to match #hud-wpm-overall in gameplay.html (small sub-label beneath the large WPM counter).
-    private final JLabel hudWpmOverall = new JLabel("Overall: 0 WPM");
+    /** Small sub-label under WPM: live segment WPM ({@link GameplayModel#wpmInstant()}). */
+    private final JLabel hudWpmOverall = new JLabel("Current: 0 WPM");
+
+    private final JLabel hudStatAvgWpm = new JLabel("0");
+    private final JLabel hudStatPeakWpm = new JLabel("0");
+    private final JLabel hudStatAcc = new JLabel("100%");
+    private final JLabel hudStatErrors = new JLabel("0");
+    private final JLabel hudStatTime = new JLabel("0:00");
+    private final JLabel hudStatHigh = new JLabel("0");
+    private final JLabel hudStatLevel = new JLabel("1");
+    private final JLabel hudStatWords = new JLabel("0");
     private final JLabel hudLines = new JLabel("0");
     private final JLabel hudStreak = new JLabel("0");
     private final JLabel hudMult = new JLabel("x1");
     private final JLabel hudAcc = new JLabel("100%");
     private final JLabel hudLevel = new JLabel("1");
+    private final JLabel hudLives = new JLabel("\u2665".repeat(GameplayModel.STARTING_LIVES));
     private final JProgressBar levelBar = new JProgressBar(0, 100);
-    private final JLabel phaseLabel = new JLabel("Type the word");
     // CHANGE 2: new field — mirrors <p id="falling-word-hint"> below the playfield in gameplay.html.
     private final JLabel fallingWordHint = new JLabel(" ");
     /** Semi-transparent layer over the play area while {@link GameplayModel#isPaused()}. */
     private final JPanel pauseOverlay = new JPanel();
     /** Prevents {@link DocumentListener} recursion when the model rewrites the typing field. */
     private boolean ignoreTypingDoc;
+
+    /**
+     * At most one pending {@link #syncTypingFromDocumentAfterNotification()} on the EDT. Without this,
+     * each document event (and each programmatic {@code setText}) queues a separate {@code invokeLater},
+     * which can backlog the EDT and make typing appear seconds behind.
+     */
+    private boolean typingSyncScheduled;
  
     /** ~60 FPS game step; drives {@link GameplayModel#tick(double)} and board repaint. */
     private Timer gameTimer;
@@ -95,6 +125,16 @@ public final class GameplayPanel extends JPanel {
  
     /** Last piece word we showed a typing prompt for (refocus typing when a new word spawns). */
     private String lastTypingTargetWord;
+
+    private final GameplayAudio audio = new GameplayAudio();
+
+    private final JLabel powerStatusLabel = new JLabel(" ");
+    private JButton powerFreezeBtn;
+    private JButton powerEasyBtn;
+    private JButton powerBlastBtn;
+
+    private JLayeredPane gameplayLayeredPane;
+    private final JLabel lifeLostFlash = new JLabel("", SwingConstants.CENTER);
  
     public GameplayPanel(
             AuthRepository auth,
@@ -122,15 +162,46 @@ public final class GameplayPanel extends JPanel {
             public void onRepaint() {
                 board.repaint();
             }
- 
+
             @Override
             public void onHudChanged() {
                 syncHud();
             }
- 
+
+            @Override
+            public void onAudioUserActivity() {
+                audio.ensureStarted();
+            }
+
+            @Override
+            public void onAudioBlockLand() {
+                audio.playBlockLand();
+            }
+
+            @Override
+            public void onAudioRowClear(int clearedCount) {
+                audio.playRowClear(clearedCount);
+            }
+
+            @Override
+            public void onAudioPowerUp() {
+                audio.playPowerUp();
+            }
+
+            @Override
+            public void onAudioTypingError() {
+                audio.playTypingError();
+            }
+
+            @Override
+            public void onLifeLost(int livesRemaining) {
+                showLifeLostNotification(livesRemaining);
+            }
+
             @Override
             public void onGameOver() {
                 if (model == null) return;
+                audio.stopBgm();
                 lastScore = model.getScore();
                 ClientPrefs.putBestScoreIfHigher(username, tier, subLevel, model.getScore());
                 // Clearing a sub-level unlocks the next within the same tier (matches web localStorage).
@@ -138,9 +209,15 @@ public final class GameplayPanel extends JPanel {
                 try {
                     auth.recordGameResult(
                             username,
-                            model.getScore(),
-                            model.wpmOverall(),
-                            model.accuracyPercent());
+                            new CompletedRunStats(
+                                    model.getScore(),
+                                    model.wpmOverall(),
+                                    model.accuracyPercent(),
+                                    model.getWrongStrokes(),
+                                    model.getSessionActivePlayMs(),
+                                    model.getPeakLevelRun(),
+                                    model.getWordsTypedRun(),
+                                    model.getPeakWpmRun()));
                 } catch (Exception ignored) {
                 }
                 SwingUtilities.invokeLater(() -> navigateReplaceCard.accept(Screens.GAME_OVER));
@@ -161,7 +238,10 @@ public final class GameplayPanel extends JPanel {
  
         JPanel playCol = new JPanel(new BorderLayout());
         playCol.setOpaque(false);
-        board.setPreferredSize(new Dimension(GameplayModel.COLS * 28 + 4, GameplayModel.ROWS * 28 + 4));
+        Dimension boardSize =
+                new Dimension(GameplayModel.COLS * BOARD_CELL_PX + 4, GameplayModel.ROWS * BOARD_CELL_PX + 4);
+        board.setPreferredSize(boardSize);
+        board.setMinimumSize(boardSize);
         board.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -263,6 +343,17 @@ public final class GameplayPanel extends JPanel {
         });
         // Same pipeline as web "input" + onTypingInput: must not call setText inside document notifications.
         typing.getDocument().addDocumentListener(new DocumentListener() {
+            private void scheduleTypingSync() {
+                if (ignoreTypingDoc || typingSyncScheduled) {
+                    return;
+                }
+                typingSyncScheduled = true;
+                SwingUtilities.invokeLater(() -> {
+                    typingSyncScheduled = false;
+                    syncTypingFromDocumentAfterNotification();
+                });
+            }
+
             private void syncTypingFromDocumentAfterNotification() {
                 if (ignoreTypingDoc || model == null || model.isOver() || model.isPaused()) {
                     return;
@@ -274,17 +365,26 @@ public final class GameplayPanel extends JPanel {
                 // Web blurs input when unlocked; if focus returns to the field, ignore edits here.
                 if (pcBefore.unlocked) {
                     ignoreTypingDoc = true;
-                    typing.setText("");
-                    typing.setCaretPosition(0);
-                    ignoreTypingDoc = false;
+                    try {
+                        typing.setText("");
+                        typing.setCaretPosition(0);
+                    } finally {
+                        ignoreTypingDoc = false;
+                    }
                     return;
                 }
                 model.onTypingFieldChanged(typing.getText());
-                ignoreTypingDoc = true;
                 String shown = model.currentTypingDisplay();
-                typing.setText(shown);
-                typing.setCaretPosition(shown.length());
-                ignoreTypingDoc = false;
+                ignoreTypingDoc = true;
+                try {
+                    // Avoid setText when unchanged — it still fires document events and would re-queue work.
+                    if (!shown.contentEquals(typing.getText())) {
+                        typing.setText(shown);
+                    }
+                    typing.setCaretPosition(shown.length());
+                } finally {
+                    ignoreTypingDoc = false;
+                }
                 GameplayModel.Piece pcAfter = model.getPiece();
                 if (pcAfter != null && pcAfter.unlocked) {
                     SwingUtilities.invokeLater(GameplayPanel.this::requestFocusInWindow);
@@ -293,19 +393,20 @@ public final class GameplayPanel extends JPanel {
 
             @Override
             public void insertUpdate(DocumentEvent e) {
-                SwingUtilities.invokeLater(this::syncTypingFromDocumentAfterNotification);
+                scheduleTypingSync();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                SwingUtilities.invokeLater(this::syncTypingFromDocumentAfterNotification);
+                scheduleTypingSync();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                SwingUtilities.invokeLater(this::syncTypingFromDocumentAfterNotification);
+                scheduleTypingSync();
             }
         });
+        installTypingPowerKeyBindings(typing);
  
         hintTyping.setFont(TypeTrisTheme.label(11f, Font.BOLD));
         hintTyping.setForeground(TypeTrisTheme.PRIMARY);
@@ -321,30 +422,55 @@ public final class GameplayPanel extends JPanel {
  
         center.add(playCol, BorderLayout.CENTER);
  
-        // show top bar with pause / options / quit buttons
-        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // Top bar: power-ups (instructions: Time freeze, Easy words, Block buster) + pause.
+        JPanel topBar = new JPanel(new BorderLayout(8, 0));
         topBar.setOpaque(false);
-        JButton pauseBtn = neonButton("Pause", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
+        JPanel powerRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        powerRow.setOpaque(false);
+        powerStatusLabel.setFont(TypeTrisTheme.label(10f, Font.PLAIN));
+        powerStatusLabel.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        powerRow.add(powerStatusLabel);
+        powerFreezeBtn = compactPowerButton("Freeze (1)", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
+        powerFreezeBtn.setToolTipText("Time freeze — slows drops for a few seconds (matches instructions).");
+        powerFreezeBtn.addActionListener(e -> tryActivatePowerup(1));
+        powerEasyBtn = compactPowerButton("Easy words (2)", TypeTrisTheme.TERTIARY, new Color(0x0d2a00));
+        powerEasyBtn.setToolTipText("Easy words — next spawns use shorter words.");
+        powerEasyBtn.addActionListener(e -> tryActivatePowerup(2));
+        powerBlastBtn = compactPowerButton("Blast (3)", TypeTrisTheme.ERROR, Color.WHITE);
+        powerBlastBtn.setToolTipText("Block buster — next lock clears nearby stack cells.");
+        powerBlastBtn.addActionListener(e -> tryActivatePowerup(3));
+        powerRow.add(powerFreezeBtn);
+        powerRow.add(powerEasyBtn);
+        powerRow.add(powerBlastBtn);
+        topBar.add(powerRow, BorderLayout.WEST);
+
+        JPanel topEast = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        topEast.setOpaque(false);
+        JButton pauseBtn = neonButton("Pause (Esc)", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
         pauseBtn.addActionListener(e -> {
             model.togglePause();
             pauseOverlay.setVisible(model.isPaused());
+            audio.setBgmPaused(model.isPaused());
             if (!model.isPaused()) {
                 refocusTypingIfNeeded();
             }
+            syncHud();
         });
-        JButton optBtn = neonButton("Options", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
-        optBtn.addActionListener(e -> navigateReplaceCard.accept(Screens.DIFFICULTY));
-        JButton quitBtn = neonButton("Quit", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE_VARIANT);
-        quitBtn.addActionListener(e -> quitWithUnsavedWarning());
-        topBar.add(pauseBtn);
-        topBar.add(optBtn);
-        topBar.add(quitBtn);
+        topEast.add(pauseBtn);
+        topBar.add(topEast, BorderLayout.EAST);
  
         // Stack main layout + pause overlay in one fixed-size band (matches compact desktop layout).
         JLayeredPane layered = new JLayeredPane();
-        layered.setPreferredSize(new Dimension(900, 560));
+        layered.setPreferredSize(new Dimension(VIEWPORT_W, VIEWPORT_H));
         wrapCenter(layered, topBar, center, pauseOverlay);
- 
+        gameplayLayeredPane = layered;
+        lifeLostFlash.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
+        lifeLostFlash.setForeground(TypeTrisTheme.ERROR);
+        lifeLostFlash.setOpaque(false);
+        lifeLostFlash.setVisible(false);
+        lifeLostFlash.setBounds(VIEWPORT_W / 2 - 170, VIEWPORT_H / 2 - 80, 340, 100);
+        layered.add(lifeLostFlash, JLayeredPane.DRAG_LAYER);
+
         model.startRound(); // start round after UI is built
  
         installKeyboardActions();
@@ -352,9 +478,15 @@ public final class GameplayPanel extends JPanel {
         gameTimer = new Timer(16, e -> {
             model.tick(0.016);
             board.repaint();
+            if (model.getTimeFreezeRemainingSec() > 0) {
+                syncHud();
+            }
         });
         gameTimer.start();
- 
+
+        // Start BGM as soon as gameplay is shown (desktop has no browser autoplay gate).
+        audio.ensureStarted();
+
         // HUD already refreshed by startRound() so fireHud()
  
         // overlay is added in wrapCenter before children here
@@ -366,13 +498,11 @@ public final class GameplayPanel extends JPanel {
         resume.addActionListener(e -> {
             model.setPaused(false);
             pauseOverlay.setVisible(false);
+            audio.setBgmPaused(false);
             refocusTypingIfNeeded();
+            syncHud();
         });
         pauseOverlay.add(resume);
-        // CHANGE 5: pause menu matches web — Resume, Options, Quit Game (no save stub).
-        JButton pauseOptions = neonButton("Options", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE);
-        pauseOptions.addActionListener(e -> navigateReplaceCard.accept(Screens.DIFFICULTY));
-        pauseOverlay.add(pauseOptions);
         JButton pauseQuit = neonButton("Quit Game", TypeTrisTheme.SURFACE_CONTAINER, TypeTrisTheme.ON_SURFACE_VARIANT);
         pauseQuit.addActionListener(e -> quitWithUnsavedWarning());
         pauseOverlay.add(pauseQuit);
@@ -396,11 +526,10 @@ public final class GameplayPanel extends JPanel {
         stack.setOpaque(false);
         stack.add(topBar, BorderLayout.NORTH);
         stack.add(center, BorderLayout.CENTER);
-        stack.setBounds(0, 0, 900, 560);
+        stack.setBounds(0, 0, VIEWPORT_W, VIEWPORT_H);
         layered.add(stack, JLayeredPane.DEFAULT_LAYER);
-        // CHANGE 6: overlay now covers the full panel (0,0,900,560) instead of a 140px strip at y=420.
-        // Matches #pause-overlay { position: fixed; inset: 0 } in gameplay.html.
-        overlay.setBounds(0, 0, 900, 560);
+        // Pause overlay covers the same band as the stack.
+        overlay.setBounds(0, 0, VIEWPORT_W, VIEWPORT_H);
         layered.add(overlay, JLayeredPane.PALETTE_LAYER);
         add(layered, BorderLayout.CENTER);
     }
@@ -426,6 +555,72 @@ public final class GameplayPanel extends JPanel {
         ButtonRolloverSupport.install(b, bg);
         return b;
     }
+
+    private JButton compactPowerButton(String text, Color bg, Color fg) {
+        JButton b = new JButton(text);
+        b.setBackground(bg);
+        b.setForeground(fg);
+        b.setFont(TypeTrisTheme.label(9f, Font.BOLD));
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setContentAreaFilled(true);
+        b.setBorder(
+                BorderFactory.createCompoundBorder(
+                        new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                        new EmptyBorder(4, 8, 4, 8)));
+        ButtonRolloverSupport.install(b, bg);
+        return b;
+    }
+
+    private void installTypingPowerKeyBindings(JTextField tf) {
+        int c = JComponent.WHEN_FOCUSED;
+        for (int i = 1; i <= 3; i++) {
+            final int slot = i;
+            tf.getInputMap(c).put(KeyStroke.getKeyStroke(KeyEvent.VK_0 + i, 0), "tpow" + i);
+            tf.getActionMap().put("tpow" + i, new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    tryActivatePowerup(slot);
+                }
+            });
+        }
+    }
+
+    private void showLifeLostNotification(int livesRemaining) {
+        if (gameplayLayeredPane == null) {
+            return;
+        }
+        lifeLostFlash.setText(
+                "<html><center>Life lost!<br><span style='font-size:18px'>" + livesRemaining + " left</span></center></html>");
+        lifeLostFlash.setVisible(true);
+        gameplayLayeredPane.setLayer(lifeLostFlash, JLayeredPane.DRAG_LAYER);
+        gameplayLayeredPane.moveToFront(lifeLostFlash);
+        Timer hide = new Timer(850, ev -> {
+            lifeLostFlash.setVisible(false);
+            ((Timer) ev.getSource()).stop();
+        });
+        hide.setRepeats(false);
+        hide.start();
+    }
+
+    private void tryActivatePowerup(int slot) {
+        if (model == null || model.isOver() || model.isPaused()) {
+            return;
+        }
+        boolean ok =
+                switch (slot) {
+                    case 1 -> model.activateTimeFreeze();
+                    case 2 -> model.activateEasyWords();
+                    case 3 -> model.activateBlockBuster();
+                    default -> false;
+                };
+        if (ok) {
+            audio.ensureStarted();
+            audio.playPowerUp();
+            board.repaint();
+            syncHud();
+        }
+    }
  
     private JPanel buildHudColumn() {
         JPanel p = new JPanel();
@@ -439,42 +634,37 @@ public final class GameplayPanel extends JPanel {
         p.add(hudBlock("BEST SCORE", hudBest, 22f));
         p.add(javax.swing.Box.createVerticalStrut(8));
         p.add(hudBlock("WORDS PER MINUTE", hudWpm, 24f));
-        // CHANGE 7a: pass hudWpmOverall (renamed from hudWpmNow) to hudTiny.
         p.add(hudTiny(hudWpmOverall));
-        p.add(javax.swing.Box.createVerticalStrut(8));
-        // CHANGE 7b: LINES CLEARED, STREAK, COMBO, ACCURACY, LEVEL removed from here —
-        // they now live in buildRightColumn() matching the right col-span-3 panel in gameplay.html.
-        p.add(javax.swing.Box.createVerticalStrut(12));
-        JLabel cTitle = new JLabel("CONTROLS");
-        cTitle.setFont(TypeTrisTheme.label(10f, Font.BOLD));
-        cTitle.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        p.add(cTitle);
-        phaseLabel.setFont(TypeTrisTheme.headline(14f, Font.BOLD));
-        phaseLabel.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
-        p.add(phaseLabel);
- 
-        // CHANGE 8: HOW TO PLAY section added at the bottom of the left panel to match
-        // the second card in the col-span-3 left section of gameplay.html.
-        p.add(javax.swing.Box.createVerticalStrut(16));
-        JLabel howTitle = new JLabel("HOW TO PLAY");
-        howTitle.setFont(TypeTrisTheme.label(10f, Font.BOLD));
-        howTitle.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        p.add(howTitle);
+
+        p.add(javax.swing.Box.createVerticalStrut(10));
+        JLabel statsHead = new JLabel("SESSION STATS");
+        statsHead.setFont(TypeTrisTheme.label(10f, Font.BOLD));
+        statsHead.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        p.add(statsHead);
         p.add(javax.swing.Box.createVerticalStrut(4));
-        String[] tips = {
-            "<html>• Type the word to unlock move / rotate; if it lands first, it locks there.</html>",
-            "<html>• ← → move, ↑ ↓ rotate, Space to drop &amp; lock.</html>",
-            "<html>• Fill rows to clear them and score.</html>",
-            "<html>• Game ends if the stack reaches the top.</html>"
-        };
-        for (String tip : tips) {
-            JLabel l = new JLabel(tip);
-            l.setFont(TypeTrisTheme.label(11f, Font.PLAIN));
-            l.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-            p.add(l);
-        }
- 
+        JPanel statGrid = new JPanel(new GridLayout(0, 2, 6, 2));
+        statGrid.setOpaque(false);
+        styleHudStatPair(statGrid, "Avg WPM", hudStatAvgWpm);
+        styleHudStatPair(statGrid, "Peak WPM", hudStatPeakWpm);
+        styleHudStatPair(statGrid, "Accuracy", hudStatAcc);
+        styleHudStatPair(statGrid, "Errors", hudStatErrors);
+        styleHudStatPair(statGrid, "Time", hudStatTime);
+        styleHudStatPair(statGrid, "High score", hudStatHigh);
+        styleHudStatPair(statGrid, "Level", hudStatLevel);
+        styleHudStatPair(statGrid, "Words typed", hudStatWords);
+        p.add(statGrid);
+
         return p;
+    }
+
+    private void styleHudStatPair(JPanel grid, String title, JLabel value) {
+        JLabel t = new JLabel(title);
+        t.setFont(TypeTrisTheme.label(9f, Font.PLAIN));
+        t.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        value.setFont(TypeTrisTheme.label(10f, Font.BOLD));
+        value.setForeground(TypeTrisTheme.PRIMARY);
+        grid.add(t);
+        grid.add(value);
     }
  
     /**
@@ -490,6 +680,9 @@ public final class GameplayPanel extends JPanel {
         p.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
         p.setBorder(new LineBorder(TypeTrisTheme.PRIMARY.darker(), 1));
  
+        p.add(hudBlock("LIVES", hudLives, 28f));
+        p.add(javax.swing.Box.createVerticalStrut(8));
+
         // LEVEL & PROGRESS section (#hud-current-level, #hud-lines-cleared, #hud-level-progress-fill)
         p.add(hudBlock("CURRENT LEVEL:", hudLevel, 28f));
         p.add(javax.swing.Box.createVerticalStrut(8));
@@ -542,18 +735,52 @@ public final class GameplayPanel extends JPanel {
         }
         hudScore.setText(String.valueOf(model.getScore()));
         hudBest.setText(String.valueOf(model.getBestDisplayed()));
-        // CHANGE 9: WPM labels were swapped — fixed to match gameplay.html element IDs.
-        // #hud-wpm is the large live counter → wpmInstant().
-        // #hud-wpm-overall is the small sub-label → wpmOverall().
-        hudWpm.setText(String.valueOf(model.wpmInstant()));
-        hudWpmOverall.setText("Overall: " + model.wpmOverall() + " WPM");
+        // Large WPM = overall run average; small line = live segment WPM (swapped vs original HTML mapping).
+        hudWpm.setText(String.valueOf(model.wpmOverall()));
+        hudWpmOverall.setText("Current: " + model.wpmInstant() + " WPM");
+        hudStatAvgWpm.setText(String.valueOf(model.wpmOverall()));
+        hudStatPeakWpm.setText(String.valueOf(model.getPeakWpmRun()));
+        hudStatAcc.setText(model.accuracyPercent() + "%");
+        hudStatErrors.setText(String.valueOf(model.getWrongStrokes()));
+        hudStatTime.setText(PlayerAccount.formatPlayTime(model.getSessionActivePlayMs()));
+        hudStatHigh.setText(String.valueOf(model.getBestDisplayed()));
+        hudStatLevel.setText(String.valueOf(model.getPeakLevelRun()));
+        hudStatWords.setText(String.valueOf(model.getWordsTypedRun()));
+        int g = model.getFlawlessStreakGoal();
+        int p = model.getFlawlessStreakProgress();
+        int ch = model.getPowerupCharges();
+        StringBuilder st = new StringBuilder();
+        st.append(String.format("Flawless %d/%d  •  Charges: %d", p, g, ch));
+        if (model.getTimeFreezeRemainingSec() > 0.05) {
+            st.append(String.format("  •  Freeze %.1fs", model.getTimeFreezeRemainingSec()));
+        }
+        if (model.getEasyWordSpawnsRemaining() > 0) {
+            st.append(String.format("  •  Easy×%d", model.getEasyWordSpawnsRemaining()));
+        }
+        if (model.isBlockBusterArmed()) {
+            st.append("  •  Blast armed");
+        }
+        powerStatusLabel.setText(st.toString());
+        boolean canSpend = ch > 0 && !model.isPaused() && !model.isOver();
+        powerFreezeBtn.setEnabled(canSpend);
+        powerEasyBtn.setEnabled(canSpend);
+        powerBlastBtn.setEnabled(canSpend);
         hudLines.setText(String.valueOf(model.getLinesCleared()));
         hudStreak.setText(String.valueOf(model.getLineStreak()));
         hudMult.setText("x" + model.getMult());
         hudAcc.setText(model.accuracyPercent() + "%");
         hudLevel.setText(String.valueOf(model.runLevelFromLines()));
         levelBar.setValue(model.levelProgressPercent());
-        phaseLabel.setText(model.controlPhaseLabel());
+        int lv = model.getLives();
+        int lmax = model.getStartingLives();
+        hudLives.setText("\u2665".repeat(Math.max(0, lv)) + "\u2661".repeat(Math.max(0, lmax - lv)));
+        if (lv <= 1) {
+            hudLives.setForeground(TypeTrisTheme.ERROR);
+        } else if (lv <= 2) {
+            hudLives.setForeground(TypeTrisTheme.YELLOW_MEDIUM);
+        } else {
+            hudLives.setForeground(TypeTrisTheme.PRIMARY);
+        }
         // Web: input.disabled while paused (gameplay.js setPausedUI).
         typing.setEnabled(!model.isPaused() && !model.isOver());
         GameplayModel.Piece pc = model.getPiece();
@@ -605,13 +832,36 @@ public final class GameplayPanel extends JPanel {
                 }
                 model.togglePause();
                 pauseOverlay.setVisible(model.isPaused());
+                audio.setBgmPaused(model.isPaused());
                 if (!model.isPaused()) {
                     refocusTypingIfNeeded();
                 }
+                syncHud();
+            }
+        });
+        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_1, 0), "pow1");
+        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_2, 0), "pow2");
+        getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_3, 0), "pow3");
+        getActionMap().put("pow1", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                tryActivatePowerup(1);
+            }
+        });
+        getActionMap().put("pow2", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                tryActivatePowerup(2);
+            }
+        });
+        getActionMap().put("pow3", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                tryActivatePowerup(3);
             }
         });
     }
- 
+
     /**
      * After unlock, focus may be on this panel (see document listener). Arrows/space must still move the
      * piece; the typing field listener only runs when the field has focus.
@@ -699,6 +949,7 @@ public final class GameplayPanel extends JPanel {
         if (gameTimer != null) {
             gameTimer.stop();
         }
+        audio.shutdown();
     }
  
     public GameplayModel getModel() {
@@ -713,7 +964,7 @@ public final class GameplayPanel extends JPanel {
  
     /** Renders the locked grid and the active piece with per-cell styling (typed / wrong / unlocked). */
     private final class BoardCanvas extends JPanel {
-        private final int cell = 28;
+        private final int cell = BOARD_CELL_PX;
  
         BoardCanvas() {
             setOpaque(true);

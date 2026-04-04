@@ -368,7 +368,8 @@ public final class WebServer {
                             "username", p.username(),
                             "highScore", p.highScore(),
                             "bestWPM", p.bestWPM(),
-                            "avgAccuracy", p.avgAccuracy()));
+                            "avgAccuracy", p.avgAccuracy(),
+                            "gamesPlayed", p.gamesPlayed()));
                 }
 
                 sendJson(exchange, 200, Map.of("ok", true, "leaderboard", out));
@@ -406,8 +407,15 @@ public final class WebServer {
                 sendJson(exchange, 400, Map.of("ok", false, "error", "score, wpm, and accuracy must be numbers."));
                 return;
             }
+            int wrongStrokes = parseOptionalNonNegativeInt(body.get("wrongStrokes"), 0);
+            long activeMs = parseOptionalNonNegativeLong(body.get("activePlayTimeMs"), 0L);
+            int maxLevel = parseOptionalNonNegativeInt(body.get("maxLevel"), 0);
+            int wordsTyped = parseOptionalNonNegativeInt(body.get("wordsTyped"), 0);
+            int peakWpm = parseOptionalNonNegativeInt(body.get("peakWpm"), wpm);
+            CompletedRunStats run = new CompletedRunStats(
+                    score, wpm, accuracy, wrongStrokes, activeMs, maxLevel, wordsTyped, peakWpm);
             try {
-                authRepository.recordGameResult(username, score, wpm, accuracy);
+                authRepository.recordGameResult(username, run);
                 sendJson(exchange, 200, Map.of("ok", true, "message", "Stats saved."));
             } catch (SQLException e) {
                 sendJson(exchange, 500, Map.of("ok", false, "error", "Database error."));
@@ -488,6 +496,31 @@ public final class WebServer {
 
     private static String trim(String v) {
         return v == null ? "" : v.trim();
+    }
+
+    private static int parseOptionalNonNegativeInt(String raw, int defaultValue) {
+        String t = trim(raw);
+        if (t.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(t));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private static long parseOptionalNonNegativeLong(String raw, long defaultValue) {
+        String t = trim(raw);
+        if (t.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            long v = Long.parseLong(t);
+            return Math.max(0L, v);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private static String contentType(String filename) {

@@ -68,6 +68,11 @@ public final class AuthRepository {
             ensureColumnExists(c, "users", "best_wpm", "best_wpm INTEGER NOT NULL DEFAULT 0");
             ensureColumnExists(c, "users", "avg_accuracy", "avg_accuracy REAL NOT NULL DEFAULT 0.0");
             ensureColumnExists(c, "users", "games_played", "games_played INTEGER NOT NULL DEFAULT 0");
+            ensureColumnExists(c, "users", "avg_wpm", "avg_wpm REAL NOT NULL DEFAULT 0.0");
+            ensureColumnExists(c, "users", "total_errors", "total_errors INTEGER NOT NULL DEFAULT 0");
+            ensureColumnExists(c, "users", "total_play_time_ms", "total_play_time_ms INTEGER NOT NULL DEFAULT 0");
+            ensureColumnExists(c, "users", "max_level", "max_level INTEGER NOT NULL DEFAULT 0");
+            ensureColumnExists(c, "users", "words_typed", "words_typed INTEGER NOT NULL DEFAULT 0");
         }
     }
 
@@ -216,23 +221,30 @@ public final class AuthRepository {
 
     /**
      * Updates rolling stats after a finished run. {@code accuracyPercent} is 0–100.
-     * High score and best WPM are replaced only when the new values are higher.
      */
-    public void recordGameResult(String username, int score, int wpm, double accuracyPercent) throws SQLException {
-        if (username == null || username.isBlank()) {
+    public void recordGameResult(String username, CompletedRunStats run) throws SQLException {
+        if (username == null || username.isBlank() || run == null) {
             return;
         }
-        int safeScore = Math.max(0, score);
-        int safeWpm = Math.max(0, wpm);
-        double acc = Math.max(0.0, Math.min(100.0, accuracyPercent));
+        int safeScore = Math.max(0, run.score());
+        int safeWpm = Math.max(0, run.wpmOverall());
+        int safePeak = Math.max(0, run.peakWpmThisRun());
+        double acc = Math.max(0.0, Math.min(100.0, run.accuracyPercent()));
+        int errs = Math.max(0, run.wrongStrokes());
+        long playMs = Math.max(0, run.activePlayTimeMs());
+        int lvl = Math.max(0, run.maxLevelThisRun());
+        int words = Math.max(0, run.wordsTypedThisRun());
+
         String select = """
-                SELECT high_score, best_wpm, avg_accuracy, games_played
+                SELECT high_score, best_wpm, avg_accuracy, games_played, avg_wpm, total_errors,
+                       total_play_time_ms, max_level, words_typed
                 FROM users
                 WHERE username = ?
                 """;
         String update = """
                 UPDATE users
-                SET high_score = ?, best_wpm = ?, avg_accuracy = ?, games_played = ?
+                SET high_score = ?, best_wpm = ?, avg_accuracy = ?, games_played = ?, avg_wpm = ?,
+                    total_errors = ?, total_play_time_ms = ?, max_level = ?, words_typed = ?
                 WHERE username = ?
                 """;
         try (Connection c = DriverManager.getConnection(jdbcUrl);
@@ -244,18 +256,35 @@ public final class AuthRepository {
                 }
                 int oldHigh = rs.getInt("high_score");
                 int oldBestWpm = rs.getInt("best_wpm");
-                double oldAvg = rs.getDouble("avg_accuracy");
+                double oldAvgAcc = rs.getDouble("avg_accuracy");
                 int gamesPlayed = rs.getInt("games_played");
+                double oldAvgWpm = rs.getDouble("avg_wpm");
+                int oldErrs = rs.getInt("total_errors");
+                long oldPlay = rs.getLong("total_play_time_ms");
+                int oldMaxLvl = rs.getInt("max_level");
+                int oldWords = rs.getInt("words_typed");
+
                 int newHigh = Math.max(oldHigh, safeScore);
-                int newBestWpm = Math.max(oldBestWpm, safeWpm);
+                int newBestWpm = Math.max(oldBestWpm, Math.max(safeWpm, safePeak));
                 int newGames = gamesPlayed + 1;
-                double newAvg = (oldAvg * gamesPlayed + acc) / newGames;
+                double newAvgAcc = (oldAvgAcc * gamesPlayed + acc) / newGames;
+                double newAvgWpm = (oldAvgWpm * gamesPlayed + safeWpm) / newGames;
+                int newErrs = oldErrs + errs;
+                long newPlay = oldPlay + playMs;
+                int newMaxLvl = Math.max(oldMaxLvl, lvl);
+                int newWords = oldWords + words;
+
                 try (PreparedStatement psUp = c.prepareStatement(update)) {
                     psUp.setInt(1, newHigh);
                     psUp.setInt(2, newBestWpm);
-                    psUp.setDouble(3, newAvg);
+                    psUp.setDouble(3, newAvgAcc);
                     psUp.setInt(4, newGames);
-                    psUp.setString(5, username);
+                    psUp.setDouble(5, newAvgWpm);
+                    psUp.setInt(6, newErrs);
+                    psUp.setLong(7, newPlay);
+                    psUp.setInt(8, newMaxLvl);
+                    psUp.setInt(9, newWords);
+                    psUp.setString(10, username);
                     psUp.executeUpdate();
                 }
             }
@@ -264,7 +293,8 @@ public final class AuthRepository {
 
     public PlayerAccount findPlayerAccount(String username) throws SQLException {
         String sql = """
-                SELECT username, high_score, best_wpm, avg_accuracy
+                SELECT username, high_score, best_wpm, avg_accuracy, games_played, avg_wpm, total_errors,
+                       total_play_time_ms, max_level, words_typed
                 FROM users
                 WHERE username = ?
                 """;
@@ -279,7 +309,13 @@ public final class AuthRepository {
                         rs.getString("username"),
                         rs.getInt("high_score"),
                         rs.getInt("best_wpm"),
-                        rs.getDouble("avg_accuracy"));
+                        rs.getDouble("avg_accuracy"),
+                        rs.getInt("games_played"),
+                        rs.getDouble("avg_wpm"),
+                        rs.getInt("total_errors"),
+                        rs.getLong("total_play_time_ms"),
+                        rs.getInt("max_level"),
+                        rs.getInt("words_typed"));
             }
         }
     }
@@ -290,7 +326,8 @@ public final class AuthRepository {
     public List<PlayerAccount> fetchLeaderboard(int limit) throws SQLException {
         int safeLimit = Math.max(1, Math.min(limit, 100));
         String sql = """
-                SELECT username, high_score, best_wpm, avg_accuracy
+                SELECT username, high_score, best_wpm, avg_accuracy, games_played, avg_wpm, total_errors,
+                       total_play_time_ms, max_level, words_typed
                 FROM users
                 ORDER BY high_score DESC
                 LIMIT ?
@@ -305,7 +342,13 @@ public final class AuthRepository {
                             rs.getString("username"),
                             rs.getInt("high_score"),
                             rs.getInt("best_wpm"),
-                            rs.getDouble("avg_accuracy")));
+                            rs.getDouble("avg_accuracy"),
+                            rs.getInt("games_played"),
+                            rs.getDouble("avg_wpm"),
+                            rs.getInt("total_errors"),
+                            rs.getLong("total_play_time_ms"),
+                            rs.getInt("max_level"),
+                            rs.getInt("words_typed")));
                 }
             }
         }
@@ -347,7 +390,8 @@ public final class AuthRepository {
     public int resetAllUsersGameStats() throws SQLException {
         String sql = """
                 UPDATE users
-                SET high_score = 0, best_wpm = 0, avg_accuracy = 0.0, games_played = 0
+                SET high_score = 0, best_wpm = 0, avg_accuracy = 0.0, games_played = 0,
+                    avg_wpm = 0.0, total_errors = 0, total_play_time_ms = 0, max_level = 0, words_typed = 0
                 """;
         try (Connection c = DriverManager.getConnection(jdbcUrl);
              PreparedStatement ps = c.prepareStatement(sql)) {

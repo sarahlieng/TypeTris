@@ -7,7 +7,6 @@ package typetris.ui;
 public final class Screens {
     public static final String MENU = "menu";
     public static final String LOGIN = "login";
-    public static final String REGISTER = "register";
     public static final String PLAYER = "player";
     public static final String DIFFICULTY = "difficulty";
     public static final String GAMEPLAY = "gameplay";
