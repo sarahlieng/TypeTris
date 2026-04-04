@@ -129,8 +129,9 @@ public final class GameplayPanel extends JPanel {
                 SwingUtilities.invokeLater(() -> navigateReplaceCard.accept(Screens.GAME_OVER));
             }
         });
+        model.startRound();
 
-        // —— Center: HUD | board + typing ——
+        //Center: HUD | board + typing
         JPanel center = new JPanel(new BorderLayout(16, 0));
         center.setOpaque(false);
         center.setBorder(new EmptyBorder(16, 16, 16, 16));
@@ -208,7 +209,7 @@ public final class GameplayPanel extends JPanel {
 
         center.add(playCol, BorderLayout.CENTER);
 
-        // —— Top bar: pause / options / stub save / quit ——
+        // Top bar: pause / options / stub save / quit
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topBar.setOpaque(false);
         JButton pauseBtn = neonButton("Pause", TypeTrisTheme.PRIMARY_CONTAINER, TypeTrisTheme.ON_PRIMARY);
@@ -239,7 +240,7 @@ public final class GameplayPanel extends JPanel {
         });
         gameTimer.start();
 
-        syncHud();
+        // HUD already refreshed by startRound() → fireHud(); avoid duplicate syncHud() before layout.
 
         // Note: overlay is added in wrapCenter before children here; mutating the same JPanel is OK on EDT.
         pauseOverlay.setLayout(new GridLayout(0, 1, 0, 12));
@@ -339,6 +340,9 @@ public final class GameplayPanel extends JPanel {
 
     /** Copies all HUD labels and the level bar from the model. */
     private void syncHud() {
+        if (model == null) {
+            return;
+        }
         hudScore.setText(String.valueOf(model.getScore()));
         hudBest.setText(String.valueOf(model.getBestDisplayed()));
         hudWpm.setText(String.valueOf(model.wpmOverall()));
