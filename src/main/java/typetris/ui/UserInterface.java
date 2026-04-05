@@ -147,6 +147,9 @@ public final class UserInterface extends JFrame {
 
     private final JLabel gameOverScore = new JLabel("0");
 
+    /** Tier + stage line; text refreshed on game over (label is built once at startup). */
+    private final JLabel gameOverRunCtx = new JLabel(" ");
+
     public UserInterface(AuthRepository auth) {
         this.auth = auth;
         setTitle("TYPE-TRIS");
@@ -264,6 +267,7 @@ public final class UserInterface extends JFrame {
         if (Screens.GAME_OVER.equals(screen)) {
             int s = activeGameplay != null ? activeGameplay.getLastScore() : 0;
             gameOverScore.setText(String.valueOf(s));
+            refreshGameOverRunContext();
             showCard(CARD_GAME_OVER);
             return;
         }
@@ -1657,6 +1661,18 @@ public final class UserInterface extends JFrame {
 
     // difficulty + game over (real gameplay session)
 
+    private void refreshGameOverRunContext() {
+        String tier = gameTier == null ? "" : gameTier.trim();
+        String tierPretty =
+                tier.isEmpty()
+                        ? ""
+                        : tier.substring(0, 1).toUpperCase() + tier.substring(1).toLowerCase();
+        gameOverRunCtx.setText(
+                tierPretty.isEmpty()
+                        ? "Stage " + gameSubLevel
+                        : tierPretty + " · Stage " + gameSubLevel);
+    }
+
     private JPanel buildDifficultyPanel() {
         JPanel shell = new JPanel(new BorderLayout(0, 16));
         shell.setOpaque(false);
@@ -1795,15 +1811,11 @@ public final class UserInterface extends JFrame {
         card.add(title);
         card.add(Box.createVerticalStrut(8));
 
-        String tierPretty =
-                gameTier.isEmpty()
-                        ? ""
-                        : gameTier.substring(0, 1).toUpperCase() + gameTier.substring(1).toLowerCase();
-        JLabel runCtx = new JLabel(tierPretty + " · Stage " + gameSubLevel);
-        runCtx.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
-        runCtx.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        runCtx.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.add(runCtx);
+        refreshGameOverRunContext();
+        gameOverRunCtx.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
+        gameOverRunCtx.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
+        gameOverRunCtx.setAlignmentX(Component.CENTER_ALIGNMENT);
+        card.add(gameOverRunCtx);
         card.add(Box.createVerticalStrut(22));
 
         JLabel sub = new JLabel("FINAL SCORE");
