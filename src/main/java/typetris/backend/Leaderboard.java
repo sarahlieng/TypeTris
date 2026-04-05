@@ -15,6 +15,9 @@ public final class Leaderboard {
 
     private final AuthRepository authRepository;
 
+    /**
+     * @param authRepository persistence used to load ranked players
+     */
     public Leaderboard(AuthRepository authRepository) {
         this.authRepository = authRepository;
     }

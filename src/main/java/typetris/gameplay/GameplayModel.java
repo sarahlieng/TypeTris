@@ -14,6 +14,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * Core typing and Tetris rules for one game session
  * <p>
  * Behavior follows the web client in {@code web/assets/js/gameplay.js}
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class GameplayModel {
 
@@ -24,9 +26,12 @@ public final class GameplayModel {
     /** Typing mistakes cost one life each; at zero lives the run ends (stack top-out also ends the run) */
     public static final int STARTING_LIVES = 5;
 
+    /** View/audio callbacks from the model (Swing or tests implement this). */
     public interface Listener {
+        /** Request a full board redraw. */
         void onRepaint();
 
+        /** Score, WPM, lives, or phase changed — refresh HUD labels. */
         void onHudChanged();
 
         /** Called once when the run ends; stats are readable via getters */
@@ -35,12 +40,16 @@ public final class GameplayModel {
         /** Mirrors {@code ensureAudioStarted()} on typing / movement keys in {@code gameplay.js} */
         default void onAudioUserActivity() {}
 
+        /** Piece locked to the stack. */
         default void onAudioBlockLand() {}
 
+        /** @param clearedCount lines cleared in one lock */
         default void onAudioRowClear(int clearedCount) {}
 
+        /** Combo multiplier increased. */
         default void onAudioPowerUp() {}
 
+        /** Wrong keystroke on the target word. */
         default void onAudioTypingError() {}
 
         /** Called after a typing error when {@code livesRemaining} is still &gt; 0 (HUD / brief flash) */
@@ -68,7 +77,13 @@ public final class GameplayModel {
         }
     }
 
-    /** Fall speed (rows/sec) and word length bounds for a tier + sub-level (1–3) */
+    /**
+     * Fall speed (rows/sec) and word length bounds for a tier + sub-level (1–3).
+     *
+     * @param fallRowsPerSec base gravity before per-level bonus
+     * @param lenMin shortest word length from the bank
+     * @param lenMax longest word length from the bank
+     */
     public record Params(double fallRowsPerSec, int lenMin, int lenMax) {}
 
     /**
@@ -111,11 +126,21 @@ public final class GameplayModel {
 
     /** One letter cell in a polyomino-shaped word piece; {@code wi} indexes into the target word */
     public static final class Part {
+        /** Column offset from piece anchor */
         public int x;
+        /** Row offset from piece anchor */
         public int y;
+        /** Letter shown on this cell */
         public final char ch;
+        /** Index into {@link Piece#word} */
         public final int wi;
 
+        /**
+         * @param x column offset
+         * @param y row offset
+         * @param ch displayed letter
+         * @param wi index in the word
+         */
         public Part(int x, int y, char ch, int wi) {
             this.x = x;
             this.y = y;
@@ -131,23 +156,38 @@ public final class GameplayModel {
 
     /** Falling word piece: absolute grid position plus typing progress and timing for WPM segments */
     public static final class Piece {
+        /** Uppercase target string */
         public String word;
+        /** Letter cells in piece-local coordinates */
         public List<Part> parts;
+        /** Anchor column on the board */
         public int col;
+        /** Anchor row on the board */
         public int row;
+        /** {@code true} after the word is fully typed — player may move / drop */
         public boolean unlocked;
+        /** Length of correct prefix already entered */
         public int lastTypedLen;
+        /** Index of mistaken next character, or {@code null} */
         public Integer lastWrongIndex;
+        /** {@link #typingClockMs} when current WPM segment started */
         public long typingSegmentStartClockMs;
+        /** {@link #correctStrokes} at segment start */
         public int correctStrokesAtSegmentStart;
 
+        /**
+         * Restarts instant-WPM segment baseline.
+         *
+         * @param typingClockMs current {@link GameplayModel#typingClockMs}
+         * @param correctStrokes current total correct keystrokes
+         */
         void resetSegment(long typingClockMs, int correctStrokes) {
             typingSegmentStartClockMs = typingClockMs;
             correctStrokesAtSegmentStart = correctStrokes;
         }
     }
 
-    /** Immutable letter stored in the grid after a piece locks */
+    /** Immutable letter stored in the grid after a piece locks. */
     public record LockedCell(char ch) {}
 
     // ── runtime state ────────────────────────────────────────────────────────
@@ -227,35 +267,47 @@ public final class GameplayModel {
         spawnPiece(); // internally calls fireHud()
     }
 
+    /** @return monotonic time in milliseconds for typing clocks */
     private static long nowMs() {
         return System.nanoTime() / 1_000_000L;
     }
 
     // ── accessors (read by the view / HUD) ───────────────────────────────────
 
+    /** @return whether the run is paused */
     public boolean isPaused() { return paused; }
+    /** @return whether the run has ended (loss or terminal state) */
     public boolean isOver()   { return over;   }
+    /** @return the active falling piece, or {@code null} */
     public Piece   getPiece() { return piece;  }
 
+    /** @return locked cell grid (null slots are empty) */
     public LockedCell[][] getGrid() { return grid; }
 
+    /** @return current run score */
     public int getScore()        { return score;        }
+    /** @return total full rows cleared this run */
     public int getLinesCleared() { return linesCleared; }
+    /** @return consecutive line clears without a non-clear lock */
     public int getLineStreak()   { return lineStreak;   }
+    /** @return score multiplier from streaks / combos */
     public int getMult()         { return mult;         }
 
     /** Live best — always at least the current run score so the HUD never shows a lower value */
     public int getBestDisplayed() { return Math.max(best, score); }
 
+    /** @return HUD “level” derived from lines cleared and {@link #LINES_PER_LEVEL} */
     public int runLevelFromLines() {
         return 1 + linesCleared / LINES_PER_LEVEL;
     }
 
+    /** @return 0–100 progress within the current HUD level segment */
     public int levelProgressPercent() {
         int into = linesCleared % LINES_PER_LEVEL;
         return (int) Math.min(100, (into * 100L) / LINES_PER_LEVEL);
     }
 
+    /** @return accuracy percentage from correct vs wrong keystrokes this run */
     public int accuracyPercent() {
         int t = correctStrokes + wrongStrokes;
         if (t == 0) return 100;
@@ -285,10 +337,12 @@ public final class GameplayModel {
         return (int) Math.round((correctInSegment / 5.0) / (elapsedSec / 60.0));
     }
 
+    /** @return incorrect keystrokes counted this run */
     public int getWrongStrokes() {
         return wrongStrokes;
     }
 
+    /** @return active (non-paused) play time accumulated this run, in milliseconds */
     public long getSessionActivePlayMs() {
         return sessionActiveMs;
     }
@@ -308,14 +362,17 @@ public final class GameplayModel {
         return wordsTypedRun;
     }
 
+    /** @return remaining lives */
     public int getLives() {
         return lives;
     }
 
+    /** @return starting life count for this ruleset */
     public int getStartingLives() {
         return STARTING_LIVES;
     }
 
+    /** @return spendable power-up charges earned from flawless words */
     public int getPowerupCharges() {
         return powerupCharges;
     }
@@ -325,26 +382,30 @@ public final class GameplayModel {
         return flawlessWordStreak;
     }
 
+    /** @return words in a row required to earn one charge */
     public int getFlawlessStreakGoal() {
         return FLAWLESS_WORDS_PER_CHARGE;
     }
 
+    /** @return remaining time-freeze effect duration in seconds */
     public double getTimeFreezeRemainingSec() {
         return timeFreezeSecRemaining;
     }
 
+    /** @return easy-word spawns left from the last easy-mode activation */
     public int getEasyWordSpawnsRemaining() {
         return easyWordSpawnsRemaining;
     }
 
+    /** @return whether the next lock will trigger block-buster clearing */
     public boolean isBlockBusterArmed() {
         return blockBusterNextLock;
     }
 
     /**
-     * Slows gravity for a few seconds (instructions: Time freeze)
+     * Slows gravity for a few seconds (instructions: Time freeze).
      *
-     * @return false if no charge or cannot use now
+     * @return {@code false} if no charge or cannot use now
      */
     public boolean activateTimeFreeze() {
         if (over || paused || powerupCharges <= 0) {
@@ -357,7 +418,9 @@ public final class GameplayModel {
     }
 
     /**
-     * Next spawns use shorter words (instructions: Easy words)
+     * Next spawns use shorter words (instructions: Easy words).
+     *
+     * @return {@code false} if no charge or run is paused/over
      */
     public boolean activateEasyWords() {
         if (over || paused || powerupCharges <= 0) {
@@ -370,7 +433,9 @@ public final class GameplayModel {
     }
 
     /**
-     * Next lock clears nearby stack cells (instructions: Block buster)
+     * Next lock clears nearby stack cells (instructions: Block buster).
+     *
+     * @return {@code false} if no charge or run is paused/over
      */
     public boolean activateBlockBuster() {
         if (over || paused || powerupCharges <= 0) {
@@ -384,11 +449,15 @@ public final class GameplayModel {
 
     // ── pause / unpause ──────────────────────────────────────────────────────
 
+    /** Flips paused state when the run is still active. */
     public void togglePause() {
         if (over) return;
         setPaused(!paused);
     }
 
+    /**
+     * @param p when {@code true}, freezes typing clock and shows pause UI
+     */
     public void setPaused(boolean p) {
         paused = p;
         typingClockLastWallMs = nowMs(); // prevent clock drift while paused
@@ -398,10 +467,12 @@ public final class GameplayModel {
 
     // ── internal helpers ─────────────────────────────────────────────────────
 
+    /** @return whether typing edits should affect the model */
     private boolean canTypeNow() {
         return piece != null && !over && !paused && !piece.unlocked;
     }
 
+    /** Advances {@link #typingClockMs} while the player may type. */
     private void updateTypingClock() {
         long now = nowMs();
         if (canTypeNow()) {
@@ -444,12 +515,17 @@ public final class GameplayModel {
         }
     }
 
+    /** Gravity including per-HUD-level bonus on top of tier params. */
     private double fallSpeedRowsPerSec() {
         int lv = runLevelFromLines();
         return params.fallRowsPerSec() + (lv - 1) * 0.15;
     }
 
-    /** {@code Math.min(5, 1 + Math.floor(s / 2))} — same as {@code gameplay.js} {@code multFromStreak} */
+    /**
+     * {@code Math.min(5, 1 + Math.floor(s / 2))} — same as {@code gameplay.js} {@code multFromStreak}.
+     *
+     * @param s consecutive clears
+     */
     private static int multFromStreak(int s) {
         return Math.min(5, 1 + Math.floorDiv(s, 2));
     }
@@ -557,6 +633,7 @@ public final class GameplayModel {
         }
     }
 
+    /** Horizontal shift by {@code dc} columns when unlocked. */
     private void tryMove(int dc) {
         if (piece == null || !piece.unlocked || over || paused) return;
         listener.onAudioUserActivity();
@@ -566,6 +643,7 @@ public final class GameplayModel {
         }
     }
 
+    /** Rotates the unlocked piece CW or CCW with simple wall kicks. */
     private void tryRotate(boolean ccw) {
         if (piece == null || !piece.unlocked || over || paused) return;
         listener.onAudioUserActivity();
@@ -587,12 +665,14 @@ public final class GameplayModel {
         listener.onRepaint();
     }
 
+    /** Deep-copies part offsets for rotation trials. */
     private List<Part> copyParts(List<Part> parts) {
         List<Part> o = new ArrayList<>();
         for (Part p : parts) o.add(p.copy());
         return o;
     }
 
+    /** Drops to lowest valid row then {@link #lockFromGround()}. */
     private void softDropToGround() {
         if (piece == null || over || paused) return;
         while (validParts(piece.parts, piece.col, piece.row + 1)) {
@@ -628,6 +708,7 @@ public final class GameplayModel {
         spawnPiece();
     }
 
+    /** {@code "row,col"} keys for cells the active piece occupies. */
     private Set<String> footprintKeysForPiece() {
         Set<String> keys = new HashSet<>();
         if (piece == null) {
@@ -644,7 +725,9 @@ public final class GameplayModel {
     }
 
     /**
-     * Clears locked cells within Chebyshev radius of the piece center, excluding the merged footprint
+     * Clears locked cells within Chebyshev radius of the piece center, excluding the merged footprint.
+     *
+     * @param mergedFootprint cells just written by the lock
      */
     private void applyBlockBusterBlast(Set<String> mergedFootprint) {
         if (mergedFootprint.isEmpty()) {
@@ -678,6 +761,7 @@ public final class GameplayModel {
         }
     }
 
+    /** Writes {@link #piece} letters into {@link #grid}. */
     private void mergePiece() {
         if (piece == null) return;
         for (Part pt : piece.parts) {
@@ -689,6 +773,7 @@ public final class GameplayModel {
         }
     }
 
+    /** @return {@code true} if any column is filled on row 0 */
     private boolean checkTopOut() {
         for (int c = 0; c < COLS; c++) {
             if (grid[0][c] != null) return true;
@@ -734,6 +819,7 @@ public final class GameplayModel {
         }
     }
 
+    /** Sets {@link #over}, clears piece, notifies listener once. */
     private void gameOverSequence() {
         if (over) return;
         over = true;
@@ -780,6 +866,7 @@ public final class GameplayModel {
         fireHud();
     }
 
+    /** Recomputes run peaks and notifies HUD listener. */
     private void fireHud() {
         if (!over) {
             peakWpmRun = Math.max(peakWpmRun, Math.max(wpmInstant(), wpmOverall()));
@@ -788,6 +875,7 @@ public final class GameplayModel {
         listener.onHudChanged();
     }
 
+    /** Random word from {@link #wordList} with length in {@code [lenMin, lenMax]}. */
     private String pickWord(int lenMin, int lenMax) {
         List<String> pool = new ArrayList<>();
         for (String w : wordList) {
@@ -797,6 +885,7 @@ public final class GameplayModel {
         return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
     }
 
+    /** @return {@code false} if any part is out of bounds or overlaps locked cells */
     private boolean validParts(List<Part> parts, int col, int row) {
         for (Part pt : parts) {
             int r = row + pt.y;
@@ -807,6 +896,7 @@ public final class GameplayModel {
         return true;
     }
 
+    /** Maps {@code word} onto a random tetromino-shaped cell set. */
     private List<Part> wordToParts(String word) {
         List<Cell> cells = generateTetrominoCells(word.length());
         cells.sort(Comparator.comparingInt((Cell c) -> c.y).thenComparingInt(c -> c.x));
@@ -818,6 +908,7 @@ public final class GameplayModel {
         return parts;
     }
 
+    /** @return {@code [width, height]} in cells for bounding box */
     private static int[] partExtents(List<Part> parts) {
         int maxX = 0, maxY = 0;
         for (Part p : parts) {
@@ -827,8 +918,10 @@ public final class GameplayModel {
         return new int[]{ maxX + 1, maxY + 1 };
     }
 
+    /** Integer lattice point for polyomino construction. */
     private record Cell(int x, int y) {}
 
+    /** 90° CW around origin, re-normalized to non-negative coordinates. */
     private List<Part> rotatePartsCw(List<Part> parts) {
         // CW rotation: (x, y) → (y, -x), then normalize to (0,0) origin
         List<Part> rotated = new ArrayList<>();
@@ -844,6 +937,11 @@ public final class GameplayModel {
         return out;
     }
 
+    /**
+     * Picks a standard tetromino (or extension) shape holding {@code n} cells.
+     *
+     * @param n word length
+     */
     private List<Cell> generateTetrominoCells(int n) {
         if (n <= 0) return List.of();
         List<List<Cell>> tetrominoes = List.of(
@@ -881,8 +979,10 @@ public final class GameplayModel {
         return normalize(cells);
     }
 
+    /** @return {@code new Cell(x,y)} */
     private static Cell c(int x, int y) { return new Cell(x, y); }
 
+    /** Translates so min x and y are zero. */
     private List<Cell> normalize(List<Cell> cells) {
         int minX = cells.stream().mapToInt(c -> c.x).min().orElse(0);
         int minY = cells.stream().mapToInt(c -> c.y).min().orElse(0);
@@ -891,6 +991,12 @@ public final class GameplayModel {
         return out;
     }
 
+    /**
+     * Random connected sub-polyomino of size {@code want} inside {@code tetCells}.
+     *
+     * @param tetCells four cells of a standard tetromino
+     * @param want desired size (for short words)
+     */
     private List<Cell> carveConnectedSubset(List<Cell> tetCells, int want) {
         if (want == 4) return new ArrayList<>(tetCells);
         Map<String, Cell> tetSet = new HashMap<>();

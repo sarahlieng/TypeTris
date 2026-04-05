@@ -61,6 +61,8 @@ import typetris.ui.UiButtonStyles;
  * <p>
  * Uses {@link typetris.ui.Screens} for navigation, {@link typetris.ui.ClientPrefs} for bests, and
  * {@link typetris.backend.AuthRepository#recordGameResult} for scores
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class GameplayPanel extends JPanel {
 
@@ -135,6 +137,16 @@ public final class GameplayPanel extends JPanel {
     private JLayeredPane gameplayLayeredPane;
     private final JLabel lifeLostFlash = new JLabel("", SwingConstants.CENTER);
  
+    /**
+     * Builds the gameplay card: model, HUD, board, typing row, pause overlay, and timer.
+     *
+     * @param auth repository for persisting end-of-run stats
+     * @param username logged-in player (prefs + API)
+     * @param tier difficulty key
+     * @param subLevel 1–3 within tier
+     * @param onQuitToPlayerMenu unused placeholder for shell parity
+     * @param navigateReplaceCard switches {@link java.awt.CardLayout} to another {@link Screens} name
+     */
     public GameplayPanel(
             AuthRepository auth,
             String username,
@@ -157,46 +169,55 @@ public final class GameplayPanel extends JPanel {
         // Model: tier/subLevel select fall speed and word length; best score seeds HUD "best".
         int best = ClientPrefs.getBestScore(username, tier, subLevel);
         model = new GameplayModel(tier, subLevel, best, new GameplayModel.Listener() {
+            /** {@inheritDoc} */
             @Override
             public void onRepaint() {
                 board.repaint();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onHudChanged() {
                 syncHud();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onAudioUserActivity() {
                 audio.ensureStarted();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onAudioBlockLand() {
                 audio.playBlockLand();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onAudioRowClear(int clearedCount) {
                 audio.playRowClear(clearedCount);
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onAudioPowerUp() {
                 audio.playPowerUp();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onAudioTypingError() {
                 audio.playTypingError();
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onLifeLost(int livesRemaining) {
                 showLifeLostNotification(livesRemaining);
             }
 
+            /** {@inheritDoc} */
             @Override
             public void onGameOver() {
                 if (model == null) return;
@@ -589,6 +610,7 @@ public final class GameplayPanel extends JPanel {
         pauseOverlay.add(pauseCard, pauseGbc);
     }
 
+    /** Confirms quit mid-run; navigates to player menu without persisting this session as a “clear”. */
     private void quitWithUnsavedWarning() {
         JPanel wrap = new JPanel(new BorderLayout(0, 12));
         wrap.setOpaque(false);
@@ -661,6 +683,7 @@ public final class GameplayPanel extends JPanel {
         return b;
     }
 
+    /** Binds {@code 1}–{@code 3} on the typing field to power-up slots while focused. */
     private void installTypingPowerKeyBindings(JTextField tf) {
         int c = JComponent.WHEN_FOCUSED;
         for (int i = 1; i <= 3; i++) {
@@ -675,6 +698,7 @@ public final class GameplayPanel extends JPanel {
         }
     }
 
+    /** Brief centered flash after a typo costs a life. */
     private void showLifeLostNotification(int livesRemaining) {
         if (gameplayLayeredPane == null) {
             return;
@@ -692,6 +716,11 @@ public final class GameplayPanel extends JPanel {
         hide.start();
     }
 
+    /**
+     * Dispatches to model power APIs ({@code 1}=freeze, {@code 2}=easy, {@code 3}=blast).
+     *
+     * @param slot 1–3
+     */
     private void tryActivatePowerup(int slot) {
         if (model == null || model.isOver() || model.isPaused()) {
             return;
@@ -711,6 +740,7 @@ public final class GameplayPanel extends JPanel {
         }
     }
  
+    /** Left HUD: score, best, WPM, and session stats card. */
     private JPanel buildHudColumn() {
         JPanel p = new JPanel();
         p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
@@ -803,6 +833,7 @@ public final class GameplayPanel extends JPanel {
         return wrap;
     }
 
+    /** One label/value pair inside the session stats grid. */
     private static void addSessionStatRow(
             JPanel card, GridBagConstraints cl, GridBagConstraints cv, int row, String title, JLabel value) {
         JLabel t = new JLabel(title);
@@ -848,6 +879,7 @@ public final class GameplayPanel extends JPanel {
         return p;
     }
  
+    /** Title + large value block used in HUD columns. */
     private JPanel hudBlock(String title, JLabel value, float size) {
         JPanel b = new JPanel(new BorderLayout());
         b.setOpaque(false);
@@ -863,6 +895,7 @@ public final class GameplayPanel extends JPanel {
         return b;
     }
  
+    /** Secondary caption styling under WPM. */
     private JLabel hudTiny(JLabel l) {
         l.setFont(TypeTrisTheme.label(11f, Font.PLAIN));
         l.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
@@ -1098,15 +1131,17 @@ public final class GameplayPanel extends JPanel {
         removeAll();
     }
  
-    /** Renders the locked grid and the active piece with per-cell styling (typed / wrong / unlocked) */
+    /** Renders the locked grid and the active piece with per-cell styling (typed / wrong / unlocked). */
     private final class BoardCanvas extends JPanel {
         private final int cell = BOARD_CELL_PX;
  
+        /** Sets surface background; size comes from outer panel. */
         BoardCanvas() {
             setOpaque(true);
             setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         }
  
+        /** {@inheritDoc} */
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -1179,6 +1214,7 @@ public final class GameplayPanel extends JPanel {
             g2.drawRect(0, 0, w - 1, h - 1);
         }
  
+        /** Fills one board cell and centers {@code ch}. */
         private void drawCell(Graphics2D g2, int col, int row, String ch, Color bg, Color fg) {
             int x = col * cell;
             int y = row * cell;

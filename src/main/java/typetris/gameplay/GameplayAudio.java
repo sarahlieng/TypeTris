@@ -18,6 +18,8 @@ import javax.sound.sampled.LineEvent;
  * <p>
  * Uses short {@link Clip} bursts only — no external sound files; safe to construct once per
  * {@link GameplayPanel}; call {@link #shutdown()} when leaving gameplay
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class GameplayAudio {
 
@@ -44,6 +46,7 @@ public final class GameplayAudio {
     /** 1.0 = normal; when paused, matches JS ratio {@code 0.05 / 0.28} */
     private volatile double bgmDuckFactor = 1.0;
 
+    /** Constructs audio helper; BGM starts lazily on first SFX or {@link #ensureStarted()}. */
     public GameplayAudio() {
     }
 
@@ -89,6 +92,7 @@ public final class GameplayAudio {
         stopBgm();
     }
 
+    /** Scheduled callback: plays one short chord and advances the rotating progression. */
     private void playBgmChordStep() {
         if (!started || bgmExec == null || bgmExec.isShutdown()) {
             return;
@@ -105,6 +109,7 @@ public final class GameplayAudio {
         playClipAsync(pcm);
     }
 
+    /** Low thud + bright tail when a piece locks to the stack. */
     public void playBlockLand() {
         ensureStarted();
         int n1 = msToSamples(120);
@@ -115,6 +120,11 @@ public final class GameplayAudio {
         playClipAsync(pcm);
     }
 
+    /**
+     * Ascending chord stinger scaled by how many lines cleared at once.
+     *
+     * @param clearedCount line clear count (at least 1)
+     */
     public void playRowClear(int clearedCount) {
         ensureStarted();
         int c = Math.max(1, clearedCount);
@@ -129,6 +139,7 @@ public final class GameplayAudio {
         playClipAsync(toPcm16(m));
     }
 
+    /** Harsh sweep when the player mistypes. */
     public void playTypingError() {
         ensureStarted();
         int nErr = msToSamples(90);
@@ -139,6 +150,7 @@ public final class GameplayAudio {
         playClipAsync(pcm);
     }
 
+    /** Upward gliss when a power-up activates. */
     public void playPowerUp() {
         ensureStarted();
         int n = msToSamples(220);
@@ -146,11 +158,20 @@ public final class GameplayAudio {
         playClipAsync(pcm);
     }
 
+    /** @param ms duration in milliseconds */
     private static int msToSamples(int ms) {
         return Math.max(1, (int) (SAMPLE_RATE * ms / 1000.0));
     }
 
-    /** Three sines with per-sample exponential envelope (attack + decay), same spirit as JS */
+    /**
+     * Three sines with per-sample exponential envelope (attack + decay), same spirit as JS.
+     *
+     * @param freqs chord partials in Hz
+     * @param samples PCM length
+     * @param chordDur chord duration in seconds
+     * @param peakAmp peak amplitude scale
+     * @return 16-bit mono PCM bytes
+     */
     private static byte[] renderChordSine(double[] freqs, int samples, double chordDur, double peakAmp) {
         double[] acc = new double[samples];
         double attack = Math.min(0.03, chordDur * 0.2);
@@ -164,12 +185,14 @@ public final class GameplayAudio {
         return toPcm16(acc);
     }
 
+    /** ADSR-style envelope factor for BGM chord grains. */
     private static double envelopeChord(double t, double chordDur, double attack) {
         double a = smoothstep(t / attack);
         double d = Math.exp(-t / (chordDur * 0.35));
         return Math.max(1e-4, a * d);
     }
 
+    /** Hermite smoothstep on [0,1]. */
     private static double smoothstep(double x) {
         if (x <= 0) {
             return 0;
@@ -180,6 +203,7 @@ public final class GameplayAudio {
         return x * x * (3 - 2 * x);
     }
 
+    /** Band-limited square-ish tone with exponential envelope. */
     private static double[] renderSquare(double freq, int samples, double peak) {
         double[] o = new double[samples];
         for (int n = 0; n < samples; n++) {
@@ -191,6 +215,7 @@ public final class GameplayAudio {
         return o;
     }
 
+    /** Triangle wave tone with exponential envelope. */
     private static double[] renderTriangle(double freq, int samples, double peak) {
         double[] o = new double[samples];
         for (int n = 0; n < samples; n++) {
@@ -203,10 +228,12 @@ public final class GameplayAudio {
         return o;
     }
 
+    /** Fractional part in [0,1). */
     private static double frac(double x) {
         return x - Math.floor(x);
     }
 
+    /** Square wave with linear frequency sweep from {@code f0} to {@code f1}. */
     private static double[] renderSquareSweep(double f0, double f1, int samples, double peak) {
         double[] o = new double[samples];
         double phase = 0;
@@ -221,6 +248,7 @@ public final class GameplayAudio {
         return o;
     }
 
+    /** Saw wave with linear frequency sweep. */
     private static double[] renderSawSweep(double f0, double f1, int samples, double peak) {
         double[] o = new double[samples];
         for (int n = 0; n < samples; n++) {
@@ -234,6 +262,7 @@ public final class GameplayAudio {
         return o;
     }
 
+    /** Triangle glissando between two frequencies. */
     private static double[] renderTriangleGliss(double f0, double f1, int samples, double peak) {
         double[] o = new double[samples];
         for (int n = 0; n < samples; n++) {
@@ -248,12 +277,14 @@ public final class GameplayAudio {
         return o;
     }
 
+    /** Attack/decay envelope for one-shot SFX. */
     private static double expEnv(double t, double duration, double peak) {
         double a = 1.0 - Math.exp(-t * 120);
         double d = Math.exp(-(duration - t) * 80);
         return peak * a * Math.max(1e-4, d);
     }
 
+    /** Sample-wise sum of {@code a} and {@code b} placed at {@code offsetB}. */
     private static double[] mixDouble(double[] a, double[] b, int offsetB) {
         int len = Math.max(a.length, offsetB + b.length);
         double[] m = new double[len];
@@ -269,10 +300,12 @@ public final class GameplayAudio {
         return m;
     }
 
+    /** {@link #mixDouble(double[], double[], int)} then {@link #toPcm16(double[])}. */
     private static byte[] mixOffset(double[] a, double[] b, int offsetB) {
         return toPcm16(mixDouble(a, b, offsetB));
     }
 
+    /** Converts float samples in [-1,1] to little-endian 16-bit PCM bytes. */
     private static byte[] toPcm16(double[] samples) {
         byte[] out = new byte[samples.length * 2];
         for (int i = 0; i < samples.length; i++) {
@@ -284,6 +317,7 @@ public final class GameplayAudio {
         return out;
     }
 
+    /** Plays raw PCM on a short-lived daemon thread. */
     private void playClipAsync(byte[] pcm) {
         Objects.requireNonNull(pcm);
         if (pcm.length < 4) {
@@ -292,6 +326,7 @@ public final class GameplayAudio {
         new Thread(() -> playClipSync(pcm), "typetris-sfx").start();
     }
 
+    /** Opens a {@link Clip}, plays, and closes on STOP. */
     private static void playClipSync(byte[] pcm) {
         try {
             long frames = pcm.length / FORMAT.getFrameSize();

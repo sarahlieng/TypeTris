@@ -8,17 +8,23 @@ import javax.swing.SwingUtilities;
 
 /**
  * Temporary hover / press background feedback for flat-styled {@link JButton}s (restores idle color on exit)
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class ButtonRolloverSupport {
 
     private static final String INSTALLED = "typetris.rolloverInstalled";
 
+    /** Prevents instantiation. */
     private ButtonRolloverSupport() {
     }
 
     /**
      * Installs mouse listeners that brighten on hover and darken while pressed; always returns to {@code normalBg}
-     * when the pointer leaves or the button is disabled
+     * when the pointer leaves or the button is disabled.
+     *
+     * @param b target button
+     * @param normalBg idle background to restore
      */
     public static void install(JButton b, Color normalBg) {
         if (Boolean.TRUE.equals(b.getClientProperty(INSTALLED))) {
@@ -33,6 +39,7 @@ public final class ButtonRolloverSupport {
                 new MouseAdapter() {
                     private boolean armed;
 
+                    /** {@inheritDoc} */
                     @Override
                     public void mouseEntered(MouseEvent e) {
                         if (!b.isEnabled()) {
@@ -43,6 +50,7 @@ public final class ButtonRolloverSupport {
                         }
                     }
 
+                    /** {@inheritDoc} */
                     @Override
                     public void mouseExited(MouseEvent e) {
                         if (!armed) {
@@ -50,6 +58,7 @@ public final class ButtonRolloverSupport {
                         }
                     }
 
+                    /** {@inheritDoc} */
                     @Override
                     public void mousePressed(MouseEvent e) {
                         if (!b.isEnabled() || !SwingUtilities.isLeftMouseButton(e)) {
@@ -59,6 +68,7 @@ public final class ButtonRolloverSupport {
                         b.setBackground(pressBg);
                     }
 
+                    /** {@inheritDoc} */
                     @Override
                     public void mouseReleased(MouseEvent e) {
                         if (!SwingUtilities.isLeftMouseButton(e)) {
@@ -82,6 +92,11 @@ public final class ButtonRolloverSupport {
                 ev -> b.setBackground(normalBg));
     }
 
+    /**
+     * @param c base RGB color
+     * @param factor multiplier applied to HSB brightness (clamped to 0–1)
+     * @return adjusted color
+     */
     private static Color adjustBrightness(Color c, float factor) {
         float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
         float br = Math.min(1f, Math.max(0f, hsb[2] * factor));

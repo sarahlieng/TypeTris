@@ -32,6 +32,11 @@ public final class WebServer {
     private final ObjectMapper mapper = new ObjectMapper();
     private HttpServer server;
 
+    /**
+     * @param port listen port (for example 8080)
+     * @param webRoot directory for {@link StaticHandler} (HTML/JS/CSS)
+     * @param dbPath SQLite file path passed to {@link AuthRepository}
+     */
     public WebServer(int port, Path webRoot, Path dbPath) {
         this.port = port;
         this.webRoot = webRoot;
@@ -65,13 +70,16 @@ public final class WebServer {
         server.start();
     }
 
+    /** Stops the HTTP server if {@link #start()} was called. */
     public void stop() {
         if (server != null) {
             server.stop(0);
         }
     }
 
+    /** {@code POST /api/register} — self-service account creation from JSON body. */
     private final class RegisterHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -120,7 +128,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/login} — verifies password and records a session start. */
     private final class LoginHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -148,7 +158,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/parent/sessions} — PIN-guarded session history list. */
     private final class ParentSessionsHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -170,7 +182,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/parent/accounts/list} — PIN-guarded user directory for admin UI. */
     private final class ParentAccountsListHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -192,7 +206,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/parent/accounts/create} — PIN-guarded account creation. */
     private final class ParentAccountsCreateHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -239,7 +255,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/parent/accounts/delete} — PIN-guarded account removal. */
     private final class ParentAccountsDeleteHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -270,7 +288,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code GET /api/personal-stats?username=} — JSON aggregates for one player. */
     private final class PersonalStatsHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -298,7 +318,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code POST /api/parent/accounts/reset-password} — PIN-guarded password reset. */
     private final class ParentAccountsResetPasswordHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -336,7 +358,9 @@ public final class WebServer {
         }
     }
 
+    /** {@code GET /api/leaderboard?limit=} — top players by high score. */
     private final class LeaderboardHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -384,6 +408,7 @@ public final class WebServer {
      * Not cryptographically authenticated; suitable for local / coursework use
      */
     private final class GameResultHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -423,7 +448,9 @@ public final class WebServer {
         }
     }
 
+    /** Serves files under {@link #webRoot} for {@code GET /} and asset paths. */
     private final class StaticHandler implements HttpHandler {
+        /** {@inheritDoc} */
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             String uriPath = exchange.getRequestURI().getPath();
@@ -442,6 +469,7 @@ public final class WebServer {
         }
     }
 
+    /** Parses JSON object body into string map; empty map on parse failure. */
     private Map<String, String> readJsonBody(HttpExchange exchange) throws IOException {
         try (InputStream in = exchange.getRequestBody()) {
             Map<String, Object> raw = mapper.readValue(in, new TypeReference<>() {
@@ -456,6 +484,7 @@ public final class WebServer {
         }
     }
 
+    /** Writes UTF-8 JSON response and closes the exchange. */
     private void sendJson(HttpExchange exchange, int status, Map<String, ?> payload) throws IOException {
         byte[] data = mapper.writeValueAsBytes(payload);
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
@@ -464,6 +493,7 @@ public final class WebServer {
         exchange.close();
     }
 
+    /** Plain-text (or other) small error bodies. */
     private void sendText(HttpExchange exchange, int status, String body, String contentType) throws IOException {
         byte[] data = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", contentType + "; charset=utf-8");
@@ -472,6 +502,7 @@ public final class WebServer {
         exchange.close();
     }
 
+    /** URL-decodes {@code application/x-www-form-urlencoded} style query pairs. */
     private Map<String, String> parseQueryParams(String query) {
         Map<String, String> out = new HashMap<>();
         if (query == null || query.isBlank()) {
@@ -490,14 +521,17 @@ public final class WebServer {
         return out;
     }
 
+    /** @param s percent-encoded fragment */
     private static String decode(String s) {
         return URLDecoder.decode(s, StandardCharsets.UTF_8);
     }
 
+    /** @return trimmed string or empty when {@code null} */
     private static String trim(String v) {
         return v == null ? "" : v.trim();
     }
 
+    /** @param raw optional numeric string from JSON */
     private static int parseOptionalNonNegativeInt(String raw, int defaultValue) {
         String t = trim(raw);
         if (t.isEmpty()) {
@@ -510,6 +544,7 @@ public final class WebServer {
         }
     }
 
+    /** @param raw optional numeric string from JSON */
     private static long parseOptionalNonNegativeLong(String raw, long defaultValue) {
         String t = trim(raw);
         if (t.isEmpty()) {
@@ -523,6 +558,7 @@ public final class WebServer {
         }
     }
 
+    /** Guesses {@code Content-Type} from file extension. */
     private static String contentType(String filename) {
         String lower = filename.toLowerCase();
         if (lower.endsWith(".html")) {

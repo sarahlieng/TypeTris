@@ -77,7 +77,11 @@ public final class AuthRepository {
     }
 
     /**
-     * Checks for existence of a column using SQLite PRAGMA table_info
+     * Checks for existence of a column using SQLite {@code PRAGMA table_info}.
+     *
+     * @param c open connection
+     * @param table table name
+     * @param column column name
      */
     private static boolean tableColumnExists(Connection c, String table, String column) throws SQLException {
         try (ResultSet rs = c.createStatement().executeQuery("PRAGMA table_info(" + table + ")")) {
@@ -92,7 +96,9 @@ public final class AuthRepository {
     }
 
     /**
-     * Adds a column via ALTER TABLE if it doesn't exist (used for local DB migrations)
+     * Adds a column via {@code ALTER TABLE} if it doesn't exist (local DB migrations).
+     *
+     * @param columnDefinition full fragment after column name (type and constraints)
      */
     private static void ensureColumnExists(Connection c, String table, String column, String columnDefinition) throws SQLException {
         if (tableColumnExists(c, table, column)) {
@@ -104,7 +110,13 @@ public final class AuthRepository {
     }
 
     /**
-     * Inserts a user account
+     * Inserts a user account.
+     *
+     * @param email unique email
+     * @param username unique username
+     * @param passwordHash PBKDF2 hash (Base64)
+     * @param salt random salt (Base64)
+     * @return outcome: created or which unique constraint failed
      */
     public CreateUserResult createUser(String email, String username, String passwordHash, String salt) throws SQLException {
         String sql = "INSERT INTO users(email, username, password_hash, salt) VALUES(?,?,?,?)";
@@ -131,10 +143,15 @@ public final class AuthRepository {
         }
     }
 
+    /** Result of {@link #createUser(String, String, String, String)}. */
     public enum CreateUserResult {
+        /** Row inserted successfully. */
         CREATED,
+        /** Unique constraint on email. */
         EMAIL_TAKEN,
+        /** Unique constraint on username. */
         USERNAME_TAKEN,
+        /** Other constraint violation. */
         DUPLICATE_UNKNOWN
     }
 
@@ -220,7 +237,10 @@ public final class AuthRepository {
     }
 
     /**
-     * Updates rolling stats after a finished run; {@code accuracyPercent} is 0–100
+     * Updates rolling stats after a finished run; {@code accuracyPercent} is 0–100.
+     *
+     * @param username player to update
+     * @param run end-of-run metrics (ignored when {@code null})
      */
     public void recordGameResult(String username, CompletedRunStats run) throws SQLException {
         if (username == null || username.isBlank() || run == null) {
@@ -291,6 +311,12 @@ public final class AuthRepository {
         }
     }
 
+    /**
+     * Loads persisted aggregates for one user (stats dashboard / personal view).
+     *
+     * @param username account name
+     * @return snapshot or {@code null} if unknown
+     */
     public PlayerAccount findPlayerAccount(String username) throws SQLException {
         String sql = """
                 SELECT username, high_score, best_wpm, avg_accuracy, games_played, avg_wpm, total_errors,
@@ -407,12 +433,15 @@ public final class AuthRepository {
         }
     }
 
+    /** Login row: username with stored hash and salt. */
     public record UserCredentials(String username, String passwordHash, String salt) {
     }
 
+    /** One row from {@link #listSessionHistory()}. */
     public record SessionHistory(long id, String username, String startedAt) {
     }
 
+    /** Admin table row: profile plus session aggregates. */
     public record UserAccount(
             long id,
             String email,

@@ -28,6 +28,8 @@ import javax.swing.border.LineBorder;
  * {@code instructions/instructions*.html} tutorials
  * (labels, titles, and body copy), adapted for the desktop client (controls,
  * scoring)
+ *
+ * @author CS2212 Group 26, Western University
  */
 final class InstructionsScreens {
 
@@ -42,6 +44,7 @@ final class InstructionsScreens {
     /** Max width for tutorial text blocks so lines wrap readably (centered in scroll view) */
     private static final int INSTRUCTIONS_CONTENT_W = 480;
 
+    /** Prevents instantiation; use {@link #createWizard(Runnable)}. */
     private InstructionsScreens() {
     }
 
@@ -53,6 +56,12 @@ final class InstructionsScreens {
         c.setMaximumSize(new Dimension(INSTRUCTIONS_CONTENT_W, h));
     }
 
+    /**
+     * Builds the full HOW TO PLAY wizard with header, paged content, and prev/next navigation.
+     *
+     * @param backToMenu runnable invoked when the user clicks Back (typically shows main menu)
+     * @return root panel to embed on the instructions card
+     */
     static JPanel createWizard(Runnable backToMenu) {
         JPanel root = new JPanel(new BorderLayout(0, 12));
         root.setOpaque(false);
@@ -156,6 +165,12 @@ final class InstructionsScreens {
         return root;
     }
 
+    /**
+     * Wraps a tutorial page in a themed scroll pane with sensible scroll increments.
+     *
+     * @param page content panel for one wizard step
+     * @return scroll pane ready to add to the card deck
+     */
     private static JScrollPane wrapScroll(JPanel page) {
         page.setOpaque(false);
         JScrollPane sp = new JScrollPane(page);
@@ -166,6 +181,12 @@ final class InstructionsScreens {
         return sp;
     }
 
+    /**
+     * Builds one tutorial page (0-based index) with copy aligned to the web instructions.
+     *
+     * @param i page index from {@code 0} to {@code PAGE_COUNT - 1}
+     * @return horizontally centered column panel inside a surface shell
+     */
     private static JPanel buildPage(int i) {
         JPanel inner = new JPanel();
         inner.setLayout(new BoxLayout(inner, BoxLayout.Y_AXIS));
@@ -299,6 +320,10 @@ final class InstructionsScreens {
         return shell;
     }
 
+    /**
+     * @param text small uppercase kicker (e.g. tutorial step)
+     * @return left-aligned muted label
+     */
     private static JLabel kickerLabel(String text) {
         JLabel l = new JLabel(text);
         l.setFont(TypeTrisTheme.label(10f, Font.BOLD));
@@ -308,6 +333,10 @@ final class InstructionsScreens {
         return l;
     }
 
+    /**
+     * @param text page title
+     * @return primary-colored headline label
+     */
     private static JLabel titleLabel(String text) {
         JLabel l = new JLabel(text);
         l.setFont(TypeTrisTheme.headline(20f, Font.BOLD));
@@ -317,6 +346,12 @@ final class InstructionsScreens {
         return l;
     }
 
+    /**
+     * Non-editable wrapped paragraph for tutorial body copy.
+     *
+     * @param text paragraph text
+     * @return configured {@link JTextArea}
+     */
     private static JTextArea body(String text) {
         JTextArea a = new JTextArea(text);
         a.setEditable(false);
@@ -336,6 +371,13 @@ final class InstructionsScreens {
         return a;
     }
 
+    /**
+     * Bordered callout with heading and paragraph.
+     *
+     * @param heading short title
+     * @param paragraph body text
+     * @return panel suitable for stacking in a page
+     */
     private static JPanel callout(String heading, String paragraph) {
         JPanel wrap = new JPanel(new BorderLayout(0, 8));
         wrap.setOpaque(true);
@@ -354,6 +396,12 @@ final class InstructionsScreens {
         return wrap;
     }
 
+    /**
+     * Callout with body text only (no separate heading row).
+     *
+     * @param paragraph body text
+     * @return bordered panel
+     */
     private static JPanel calloutBox(String paragraph) {
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.setOpaque(true);
@@ -367,6 +415,15 @@ final class InstructionsScreens {
         return wrap;
     }
 
+    /**
+     * Two side-by-side stat-style tiles.
+     *
+     * @param a1 first label
+     * @param v1 first value
+     * @param a2 second label
+     * @param v2 second value
+     * @return two-column grid panel
+     */
     private static JPanel twoCallouts(String a1, String v1, String a2, String v2) {
         JPanel row = new JPanel(new GridLayout(1, 2, 10, 0));
         row.setOpaque(false);
@@ -376,6 +433,14 @@ final class InstructionsScreens {
         return row;
     }
 
+    /**
+     * Single stat tile with top accent stripe.
+     *
+     * @param label small caption
+     * @param value prominent value text
+     * @param accent stripe color
+     * @return tile panel
+     */
     private static JPanel statTile(String label, String value, Color accent) {
         JPanel t = new JPanel();
         t.setLayout(new BoxLayout(t, BoxLayout.Y_AXIS));
@@ -397,16 +462,21 @@ final class InstructionsScreens {
         return t;
     }
 
-    /** Top border only */
+    /** Swing border that draws only a horizontal line along the top edge. */
     private static final class MatteTopBorder extends javax.swing.border.AbstractBorder {
         private final int thickness;
         private final Color color;
 
+        /**
+         * @param thickness line height in pixels
+         * @param color line color
+         */
         MatteTopBorder(int thickness, Color color) {
             this.thickness = thickness;
             this.color = color;
         }
 
+        /** {@inheritDoc} */
         @Override
         public void paintBorder(
                 java.awt.Component c,
@@ -419,12 +489,24 @@ final class InstructionsScreens {
             g.fillRect(x, y, width, thickness);
         }
 
+        /** {@inheritDoc} */
         @Override
         public Insets getBorderInsets(java.awt.Component c) {
             return new Insets(thickness, 0, 0, 0);
         }
     }
 
+    /**
+     * Three-column row of mini stats; middle column highlighted.
+     *
+     * @param l1 label 1
+     * @param v1 value 1
+     * @param l2 label 2
+     * @param v2 value 2
+     * @param l3 label 3
+     * @param v3 value 3
+     * @return grid panel
+     */
     private static JPanel threeStats(String l1, String v1, String l2, String v2, String l3, String v3) {
         JPanel row = new JPanel(new GridLayout(1, 3, 8, 0));
         row.setOpaque(false);
@@ -435,6 +517,14 @@ final class InstructionsScreens {
         return row;
     }
 
+    /**
+     * Compact stat cell; optional primary top stripe when {@code highlight} is true.
+     *
+     * @param label caption
+     * @param value value text
+     * @param highlight when true, draw accent top border and tint label
+     * @return panel
+     */
     private static JPanel miniStat(String label, String value, boolean highlight) {
         JPanel t = new JPanel();
         t.setLayout(new BoxLayout(t, BoxLayout.Y_AXIS));
@@ -459,7 +549,12 @@ final class InstructionsScreens {
 
     /**
      * Full-width row: glyph cell + title + body (used for power-ups and
-     * scoring—same chrome everywhere)
+     * scoring—same chrome everywhere).
+     *
+     * @param glyph single-character or short icon text
+     * @param accent stripe and glyph color
+     * @param title heading
+     * @param blurb body copy
      */
     private static JPanel stripCard(String glyph, Color accent, String title, String blurb) {
         JPanel row = new JPanel(new BorderLayout(12, 0));

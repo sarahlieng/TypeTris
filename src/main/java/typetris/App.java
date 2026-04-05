@@ -15,6 +15,7 @@ import typetris.ui.UserInterface;
  */
 public final class App {
 
+    /** Prevents instantiation; entry is via {@link #main(String[])} only. */
     private App() {
     }
 

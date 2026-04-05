@@ -59,6 +59,8 @@ import typetris.gameplay.GameplayPanel;
  * after difficulty
  * selection; data reads and writes go through {@link AuthRepository} (local
  * SQLite)
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class UserInterface extends JFrame {
 
@@ -110,6 +112,7 @@ public final class UserInterface extends JFrame {
 
     private final DefaultTableModel leaderboardModel = new DefaultTableModel(
             new Object[] { "Rank", "Username", "High score", "Best WPM", "Avg accuracy %", "Games played" }, 0) {
+        /** {@inheritDoc} */
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -118,6 +121,7 @@ public final class UserInterface extends JFrame {
 
     private final DefaultTableModel parentModel = new DefaultTableModel(
             new Object[] { "Username", "Email", "Sessions", "Last session" }, 0) {
+        /** {@inheritDoc} */
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -150,6 +154,11 @@ public final class UserInterface extends JFrame {
     /** Tier + stage line; text refreshed on game over (label is built once at startup). */
     private final JLabel gameOverRunCtx = new JLabel(" ");
 
+    /**
+     * Builds the card shell, wires every screen, and shows the main menu.
+     *
+     * @param auth shared SQLite repository for accounts and stats
+     */
     public UserInterface(AuthRepository auth) {
         this.auth = auth;
         setTitle("TYPE-TRIS");
@@ -202,6 +211,7 @@ public final class UserInterface extends JFrame {
         }
     }
 
+    /** Resets window size hints and shows the logged-in player hub card. */
     private void goPlayerMenu() {
         setMinimumSize(new Dimension(720, 520));
         if (loggedInUser != null) {
@@ -210,6 +220,7 @@ public final class UserInterface extends JFrame {
         showCard(CARD_PLAYER);
     }
 
+    /** Stops the active {@link GameplayPanel} timer and clears the gameplay host. */
     private void teardownGameplay() {
         if (activeGameplay != null) {
             activeGameplay.stopTimer();
@@ -220,6 +231,9 @@ public final class UserInterface extends JFrame {
         gameplayHost.repaint();
     }
 
+    /**
+     * Constructs a fresh {@link GameplayPanel} for {@link #gameTier}/{@link #gameSubLevel} and shows the gameplay card.
+     */
     private void mountGameplay() {
         if (loggedInUser == null) {
             return;
@@ -283,6 +297,12 @@ public final class UserInterface extends JFrame {
         }
     }
 
+    /**
+     * Validates unlock rules, stores tier/sub-level, and starts a run.
+     *
+     * @param tier difficulty key (easy/medium/hard)
+     * @param subLevel sub-level 1–3
+     */
     private void startGameAt(String tier, int subLevel) {
         if (loggedInUser == null) {
             JOptionPane.showMessageDialog(this, "Log in first.", "Play", JOptionPane.WARNING_MESSAGE);
@@ -298,6 +318,7 @@ public final class UserInterface extends JFrame {
         mountGameplay();
     }
 
+    /** Enables or disables tier buttons from {@link ClientPrefs} unlock state. */
     private void refreshDifficultyLocks() {
         if (loggedInUser == null) {
             return;
@@ -333,22 +354,32 @@ public final class UserInterface extends JFrame {
         return shell;
     }
 
+    /** Applies {@link UiButtonStyles#applyPrimary(javax.swing.JButton)}. */
     private void stylePrimaryButton(JButton b) {
         UiButtonStyles.applyPrimary(b);
     }
 
+    /** Applies {@link UiButtonStyles#applySecondary(javax.swing.JButton)}. */
     private void styleSecondaryButton(JButton b) {
         UiButtonStyles.applySecondary(b);
     }
 
+    /** Applies {@link UiButtonStyles#applyBack(javax.swing.JButton)}. */
     private void styleBackButton(JButton b) {
         UiButtonStyles.applyBack(b);
     }
 
+    /** Applies {@link UiButtonStyles#applyMuted(javax.swing.JButton)}. */
     private void styleMutedButton(JButton b) {
         UiButtonStyles.applyMuted(b);
     }
 
+    /**
+     * Outlined difficulty-level chip used on the tier columns.
+     *
+     * @param b target button
+     * @param accent tier accent color
+     */
     private void styleTierLevelButton(JButton b, Color accent) {
         b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
         b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
@@ -378,15 +409,22 @@ public final class UserInterface extends JFrame {
         ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_HIGH);
     }
 
+    /** Applies {@link UiButtonStyles#applyLink(javax.swing.JButton)}. */
     private void styleLinkButton(JButton b) {
         UiButtonStyles.applyLink(b);
     }
 
+    /** @see #styleTextField(JTextField, boolean) */
     private void styleTextField(JTextField f) {
         styleTextField(f, false);
     }
 
-    // compact=true: login / register / admin-create rows
+    /**
+     * Theme for single-line inputs.
+     *
+     * @param f text field
+     * @param compact tighter padding for dense auth rows when {@code true}
+     */
     private void styleTextField(JTextField f, boolean compact) {
         f.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         f.setForeground(TypeTrisTheme.ON_SURFACE);
@@ -406,6 +444,11 @@ public final class UserInterface extends JFrame {
     private static final int AUTH_PRIMARY_BTN_H = 46;
     private static final int AUTH_OUTLINE_BTN_H = 44;
 
+    /**
+     * Pins auth fields to {@link #AUTH_FORM_W} height for column alignment.
+     *
+     * @param f field to resize
+     */
     private static void sizeAuthField(JTextField f) {
         Dimension d = f.getPreferredSize();
         int h = Math.max(AUTH_FIELD_H, d.height);
@@ -415,7 +458,11 @@ public final class UserInterface extends JFrame {
         f.setMaximumSize(fixed);
     }
 
-    /** Full-width primary CTA in the auth card (same width as fields) */
+    /**
+     * Full-width primary CTA in the auth card (same width as fields).
+     *
+     * @param b login / register submit
+     */
     private static void bindAuthPrimaryButton(JButton b) {
         Dimension d = new Dimension(AUTH_FORM_W, AUTH_PRIMARY_BTN_H);
         b.setPreferredSize(d);
@@ -424,7 +471,11 @@ public final class UserInterface extends JFrame {
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 
-    /** Full-width secondary / outline CTA matching auth column width */
+    /**
+     * Full-width secondary / outline CTA matching auth column width.
+     *
+     * @param b back / cancel style button
+     */
     private static void bindAuthOutlineButton(JButton b) {
         Dimension d = new Dimension(AUTH_FORM_W, AUTH_OUTLINE_BTN_H);
         b.setPreferredSize(d);
@@ -433,7 +484,11 @@ public final class UserInterface extends JFrame {
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 
-    /** Larger, calmer inputs for the auth screens */
+    /**
+     * Larger, calmer inputs for the auth screens.
+     *
+     * @param f field to theme
+     */
     private void styleAuthInput(JTextField f) {
         styleTextField(f, true);
         f.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
@@ -443,11 +498,22 @@ public final class UserInterface extends JFrame {
                         BorderFactory.createEmptyBorder(10, 14, 10, 14)));
     }
 
+    /** Bold label styling for auth form captions. */
     private void styleAuthFormLabel(JLabel l) {
         l.setForeground(TypeTrisTheme.ON_SURFACE);
         l.setFont(TypeTrisTheme.label(11f, Font.BOLD));
     }
 
+    /**
+     * Adds one label+field row to a {@link GridBagLayout} form.
+     *
+     * @param form parent panel
+     * @param lc constraints for the label column
+     * @param fc constraints for the field column
+     * @param row grid row index
+     * @param label left cell
+     * @param field right cell
+     */
     private static void addAuthFormRow(JPanel form, GridBagConstraints lc, GridBagConstraints fc, int row, JLabel label,
             JTextField field) {
         lc.gridy = row;
@@ -456,11 +522,19 @@ public final class UserInterface extends JFrame {
         form.add(field, fc);
     }
 
+    /** Muted caption style for stats grid rows. */
     private void styleFormLabel(JLabel l) {
         l.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
         l.setFont(TypeTrisTheme.label(11f, Font.BOLD));
     }
 
+    /**
+     * Appends a titled label and value cell to a two-column stats grid.
+     *
+     * @param grid target grid panel
+     * @param title row caption
+     * @param value value label
+     */
     private void addStatRow(JPanel grid, String title, JLabel value) {
         JLabel h = new JLabel(title);
         styleFormLabel(h);
@@ -468,6 +542,7 @@ public final class UserInterface extends JFrame {
         grid.add(value);
     }
 
+    /** Applies dark theme colors and row height to a data {@link JTable}. */
     private void styleDataTable(JTable t) {
         t.setBackground(TypeTrisTheme.SURFACE_CONTAINER_LOW);
         t.setForeground(TypeTrisTheme.ON_SURFACE);
@@ -570,6 +645,10 @@ public final class UserInterface extends JFrame {
         t.getColumnModel().getColumn(5).setPreferredWidth(104);
     }
 
+    /**
+     * @param view table or tree to wrap
+     * @return scroll pane with themed border and viewport background
+     */
     private JScrollPane themedScroll(Component view) {
         JScrollPane sp = new JScrollPane(view);
         sp.setBorder(new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1));
@@ -599,6 +678,7 @@ public final class UserInterface extends JFrame {
 
     // main menu for guest
 
+    /** Main menu: branding, credits, login, scores, instructions, parent gate, exit. */
     private JPanel buildMenuPanel() {
         JPanel p = new JPanel();
         p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
@@ -688,6 +768,7 @@ public final class UserInterface extends JFrame {
 
     // authentication (sign-in + create account on one card)
 
+    /** Login and register tabs sharing one card ({@link #CARD_LOGIN}). */
     private JPanel buildAuthPanel() {
         authModePanel = new JPanel(new CardLayout());
         authModePanel.setOpaque(true);
@@ -1038,6 +1119,7 @@ public final class UserInterface extends JFrame {
 
     // post-login
 
+    /** Logged-in hub: start game, stats, leaderboard, logout. */
     private JPanel buildPlayerPanel() {
         JPanel p = new JPanel();
         p.setLayout(new javax.swing.BoxLayout(p, javax.swing.BoxLayout.Y_AXIS));
@@ -1104,6 +1186,7 @@ public final class UserInterface extends JFrame {
 
     // stats and leaderboard data loaders
 
+    /** Reloads {@link #statsAvgWpm}…{@link #statsGames} from {@link AuthRepository} for {@link #loggedInUser}. */
     private void refreshStats() {
         if (loggedInUser == null) {
             return;
@@ -1162,6 +1245,7 @@ public final class UserInterface extends JFrame {
 
     // stats and leaderboard panel
 
+    /** Personal statistics grid with refresh and back navigation. */
     private JPanel buildStatsPanel() {
         JPanel grid = new JPanel(new java.awt.GridLayout(0, 2, 8, 6));
         grid.setOpaque(false);
@@ -1217,6 +1301,7 @@ public final class UserInterface extends JFrame {
         return themedCard(p);
     }
 
+    /** Global high-score table (guest or player) with refresh feedback. */
     private JPanel buildLeaderboardPanel() {
         JButton refresh = new JButton("Refresh list");
         styleSecondaryButton(refresh);
@@ -1275,6 +1360,7 @@ public final class UserInterface extends JFrame {
 
     // send help text
 
+    /** Embeds {@link InstructionsScreens#createWizard(Runnable)} with back to menu. */
     private JPanel buildInstructionsPanel() {
         JPanel wizard = InstructionsScreens.createWizard(() -> showCard(CARD_MENU));
         wizard.setOpaque(false);
@@ -1283,6 +1369,7 @@ public final class UserInterface extends JFrame {
 
     // parent teacher tools
 
+    /** PIN gate before {@link #CARD_PARENT_DASH}. */
     private JPanel buildParentPanel() {
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT));
         form.setOpaque(false);
@@ -1341,6 +1428,7 @@ public final class UserInterface extends JFrame {
         }
     }
 
+    /** Parent/teacher account table, admin tools, and global score reset. */
     private JPanel buildParentDashboardPanel() {
         JButton refresh = new JButton("Refresh list");
         styleSecondaryButton(refresh);
@@ -1661,6 +1749,7 @@ public final class UserInterface extends JFrame {
 
     // difficulty + game over (real gameplay session)
 
+    /** Updates {@link #gameOverRunCtx} from {@link #gameTier} and {@link #gameSubLevel}. */
     private void refreshGameOverRunContext() {
         String tier = gameTier == null ? "" : gameTier.trim();
         String tierPretty =
@@ -1673,6 +1762,7 @@ public final class UserInterface extends JFrame {
                         : tierPretty + " · Stage " + gameSubLevel);
     }
 
+    /** Tier × stage grid wired to {@link #startGameAt(String, int)}. */
     private JPanel buildDifficultyPanel() {
         JPanel shell = new JPanel(new BorderLayout(0, 16));
         shell.setOpaque(false);
@@ -1778,6 +1868,7 @@ public final class UserInterface extends JFrame {
         return themedCard(shell);
     }
 
+    /** Post-run summary: score, save hint, restart, exit to player menu. */
     private JPanel buildGameOverPanel() {
         JPanel outer = new JPanel(new GridBagLayout());
         outer.setOpaque(false);
@@ -1869,6 +1960,7 @@ public final class UserInterface extends JFrame {
         private static final int CELL = 20;
         private static final int GAP = 3;
 
+        /** Fixed-size T-piece graphic for the main menu. */
         MenuTetrominoGraphic() {
             setOpaque(false);
             int w = 3 * CELL + 2 * GAP;
@@ -1879,6 +1971,7 @@ public final class UserInterface extends JFrame {
             setMinimumSize(d);
         }
 
+        /** {@inheritDoc} */
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -1891,6 +1984,13 @@ public final class UserInterface extends JFrame {
             g2.dispose();
         }
 
+        /**
+         * Draws one rounded block of the T shape.
+         *
+         * @param g2 graphics context
+         * @param col cell column 0–2
+         * @param row cell row 0–1
+         */
         private void drawCell(Graphics2D g2, int col, int row) {
             int x = col * (CELL + GAP);
             int y = row * (CELL + GAP);
@@ -1906,11 +2006,13 @@ public final class UserInterface extends JFrame {
      * Radial wash + soft accent blobs behind each screen card
      */
     private static final class GradientBackdrop extends JPanel {
+        /** Creates a non-opaque border-layout root for gradient painting. */
         GradientBackdrop() {
             super(new BorderLayout());
             setOpaque(false);
         }
 
+        /** {@inheritDoc} */
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
