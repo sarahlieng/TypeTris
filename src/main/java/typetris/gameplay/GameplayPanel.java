@@ -11,6 +11,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
@@ -505,39 +506,45 @@ public final class GameplayPanel extends JPanel {
 
         // HUD already refreshed by startRound() so fireHud()
  
-        // dim overlay + centered card (added after wrapCenter registers the overlay layer)
+        // Centered modal (not GridLayout rows — those stretch each child to half the viewport height).
         pauseOverlay.setLayout(new GridBagLayout());
-        pauseOverlay.setBackground(new Color(15, 18, 24, 230));
+        pauseOverlay.setBackground(new Color(0, 0, 0, 190));
         pauseOverlay.setOpaque(true);
         pauseOverlay.setVisible(false);
 
         JPanel pauseCard = new JPanel();
         pauseCard.setLayout(new BoxLayout(pauseCard, BoxLayout.Y_AXIS));
-        pauseCard.setOpaque(true);
         pauseCard.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        pauseCard.setOpaque(true);
+        Color pauseGlow = new Color(0, 255, 255, 72);
         pauseCard.setBorder(
                 BorderFactory.createCompoundBorder(
-                        new LineBorder(TypeTrisTheme.PRIMARY, 2),
-                        new EmptyBorder(28, 44, 32, 44)));
+                        BorderFactory.createLineBorder(pauseGlow, 2),
+                        BorderFactory.createCompoundBorder(
+                                new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 1),
+                                new EmptyBorder(28, 36, 28, 36))));
 
-        JLabel pausedHead = new JLabel("PAUSED");
-        pausedHead.setFont(TypeTrisTheme.headline(28f, Font.BOLD));
-        pausedHead.setForeground(TypeTrisTheme.PRIMARY);
-        pausedHead.setAlignmentX(Component.CENTER_ALIGNMENT);
-        pauseCard.add(pausedHead);
+        JLabel pauseIcon = new JLabel("\u23F8", SwingConstants.CENTER);
+        pauseIcon.setFont(TypeTrisTheme.headline(48f, Font.PLAIN));
+        pauseIcon.setForeground(TypeTrisTheme.PRIMARY_CONTAINER);
+        pauseIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+        pauseCard.add(pauseIcon);
         pauseCard.add(Box.createVerticalStrut(10));
 
-        JLabel pausedSub = new JLabel("Music is muted until you resume.");
-        pausedSub.setFont(TypeTrisTheme.body(12f, Font.PLAIN));
-        pausedSub.setForeground(TypeTrisTheme.ON_SURFACE_VARIANT);
-        pausedSub.setAlignmentX(Component.CENTER_ALIGNMENT);
-        pauseCard.add(pausedSub);
-        pauseCard.add(Box.createVerticalStrut(28));
+        JLabel pauseTitle = new JLabel("GAME PAUSED", SwingConstants.CENTER);
+        pauseTitle.setFont(TypeTrisTheme.headline(22f, Font.BOLD));
+        pauseTitle.setForeground(TypeTrisTheme.ON_SURFACE);
+        pauseTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        pauseCard.add(pauseTitle);
+        pauseCard.add(Box.createVerticalStrut(22));
 
-        JButton resume = new JButton("Resume game");
-        UiButtonStyles.applyPrimary(resume);
+        Dimension pauseModalBtn = new Dimension(300, 48);
+        JButton resume = new JButton("RESUME");
+        resume.setPreferredSize(pauseModalBtn);
+        resume.setMaximumSize(pauseModalBtn);
         resume.setAlignmentX(Component.CENTER_ALIGNMENT);
-        resume.setMaximumSize(new Dimension(240, 46));
+        UiButtonStyles.applyPrimary(resume);
+        resume.setFont(TypeTrisTheme.headline(14f, Font.BOLD));
         resume.addActionListener(e -> {
             model.setPaused(false);
             pauseOverlay.setVisible(false);
@@ -548,21 +555,46 @@ public final class GameplayPanel extends JPanel {
         pauseCard.add(resume);
         pauseCard.add(Box.createVerticalStrut(12));
 
-        JButton pauseQuit = new JButton("Quit to menu");
-        UiButtonStyles.applySecondary(pauseQuit);
+        JButton pauseQuit = new JButton("QUIT GAME");
+        pauseQuit.setFont(TypeTrisTheme.headline(14f, Font.BOLD));
+        pauseQuit.setForeground(TypeTrisTheme.ERROR);
+        pauseQuit.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
+        pauseQuit.setOpaque(true);
+        pauseQuit.setContentAreaFilled(true);
+        pauseQuit.setFocusPainted(false);
+        LineBorder quitBorderRest = new LineBorder(TypeTrisTheme.OUTLINE_VARIANT, 2);
+        LineBorder quitBorderHover = new LineBorder(TypeTrisTheme.ERROR, 2);
+        pauseQuit.setBorder(
+                BorderFactory.createCompoundBorder(quitBorderRest, new EmptyBorder(11, 18, 11, 18)));
+        pauseQuit.setPreferredSize(pauseModalBtn);
+        pauseQuit.setMaximumSize(pauseModalBtn);
         pauseQuit.setAlignmentX(Component.CENTER_ALIGNMENT);
-        pauseQuit.setMaximumSize(new Dimension(240, 42));
+        pauseQuit.addMouseListener(
+                new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        pauseQuit.setBorder(
+                                BorderFactory.createCompoundBorder(
+                                        quitBorderHover, new EmptyBorder(11, 18, 11, 18)));
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        pauseQuit.setBorder(
+                                BorderFactory.createCompoundBorder(
+                                        quitBorderRest, new EmptyBorder(11, 18, 11, 18)));
+                    }
+                });
         pauseQuit.addActionListener(e -> quitWithUnsavedWarning());
         pauseCard.add(pauseQuit);
 
-        GridBagConstraints og = new GridBagConstraints();
-        og.gridx = 0;
-        og.gridy = 0;
-        og.weightx = 1;
-        og.weighty = 1;
-        og.anchor = GridBagConstraints.CENTER;
-        og.insets = new Insets(0, 0, 0, 0);
-        pauseOverlay.add(pauseCard, og);
+        GridBagConstraints pauseGbc = new GridBagConstraints();
+        pauseGbc.gridx = 0;
+        pauseGbc.gridy = 0;
+        pauseGbc.weightx = 1;
+        pauseGbc.weighty = 1;
+        pauseGbc.anchor = GridBagConstraints.CENTER;
+        pauseOverlay.add(pauseCard, pauseGbc);
     }
 
     private void quitWithUnsavedWarning() {
