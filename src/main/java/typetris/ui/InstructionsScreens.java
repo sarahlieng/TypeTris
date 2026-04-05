@@ -27,25 +27,25 @@ import javax.swing.border.LineBorder;
  * Eight-step HOW TO PLAY flow matching the web
  * {@code instructions/instructions*.html} tutorials
  * (labels, titles, and body copy), adapted for the desktop client (controls,
- * scoring).
+ * scoring)
  */
 final class InstructionsScreens {
 
     private static final int PAGE_COUNT = 8;
-    /** Progress segments in the bottom nav: fixed size so every step matches. */
+    /** Progress segments in the bottom nav: fixed size so every step matches */
     private static final int DOT_SEGMENT_W = 24;
     private static final int DOT_SEGMENT_H = 4;
-    /** Vertical space after page title (all tutorials). */
+    /** Vertical space after page title (all tutorials) */
     private static final int GAP_AFTER_TITLE = 10;
-    /** Space between stacked sections. */
+    /** Space between stacked sections */
     private static final int GAP_SECTION = 12;
-    /** Max width for tutorial text blocks so lines wrap readably (centered in scroll view). */
+    /** Max width for tutorial text blocks so lines wrap readably (centered in scroll view) */
     private static final int INSTRUCTIONS_CONTENT_W = 480;
 
     private InstructionsScreens() {
     }
 
-    /** Cap width so body text and cards don’t span the whole window. */
+    /** Cap width so body text and cards don’t span the whole window */
     private static void capInstructionWidth(JComponent c) {
         c.setAlignmentX(Component.LEFT_ALIGNMENT);
         Dimension d = c.getPreferredSize();
@@ -459,7 +459,7 @@ final class InstructionsScreens {
 
     /**
      * Full-width row: glyph cell + title + body (used for power-ups and
-     * scoring—same chrome everywhere).
+     * scoring—same chrome everywhere)
      */
     private static JPanel stripCard(String glyph, Color accent, String title, String blurb) {
         JPanel row = new JPanel(new BorderLayout(12, 0));

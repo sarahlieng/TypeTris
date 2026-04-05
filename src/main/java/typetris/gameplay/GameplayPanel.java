@@ -57,35 +57,31 @@ import typetris.ui.TypeTrisTheme;
 import typetris.ui.UiButtonStyles;
  
 /**
- * Swing gameplay screen: left HUD, grid canvas, typing row, top action bar, and pause overlay.
+ * Swing gameplay screen: HUD, board, typing row, and pause overlay
  * <p>
- * Navigation uses {@link typetris.ui.Screens} card names via {@code navigateReplaceCard} (e.g. game over,
- * quit to player menu). Persists bests / unlocks through {@link typetris.ui.ClientPrefs} and
-* posts scores through {@link typetris.backend.AuthRepository#recordGameResult}.
+ * Uses {@link typetris.ui.Screens} for navigation, {@link typetris.ui.ClientPrefs} for bests, and
+ * {@link typetris.backend.AuthRepository#recordGameResult} for scores
  */
 public final class GameplayPanel extends JPanel {
 
-    /** Grid cell size in pixels (must match {@link BoardCanvas} drawing). */
+    /** Grid cell size in pixels (must match {@link BoardCanvas} drawing) */
     private static final int BOARD_CELL_PX = 28;
 
-    /** High-contrast label on neon power-up chips (cyan / green / pink). */
+    /** High-contrast label on neon power-up chips (cyan / green / pink) */
     private static final Color POWER_CHIP_TEXT = new Color(0x12141a);
 
-    /**
-     * Fixed size of the layered gameplay band. Tall enough for the full grid ({@link GameplayModel#ROWS}
-     * rows × {@link #BOARD_CELL_PX}px), the word hint + typing row, top bar, and panel insets; otherwise
-     * {@link BorderLayout} shrinks the board and the bottom rows clip.
-     */
+    /** Width of the layered gameplay area in pixels */
     private static final int VIEWPORT_W = 900;
+    /** Height of the layered gameplay area in pixels */
     private static final int VIEWPORT_H = 680;
 
     private final AuthRepository auth;
     private final String username;
     private final String tier;
     private final int subLevel;
-    /** Unused hook reserved for parity with a "return to menu" callback; quit uses {@code navigateReplaceCard}. */
+    /** Unused and make it ignore for parity with a "return to menu" callback; quit uses {@code navigateReplaceCard} */
     private final Runnable onQuitToPlayerMenu;
-    /** Switches the app shell to another {@link typetris.ui.Screens} card. */
+    /** Switches the app shell to another {@link typetris.ui.Screens} card */
     private final Consumer<String> navigateReplaceCard;
  
     private GameplayModel model;
@@ -94,9 +90,9 @@ public final class GameplayPanel extends JPanel {
     private final JLabel hintTyping = new JLabel(" ");
     private final JLabel hudScore = new JLabel("0");
     private final JLabel hudBest = new JLabel("0");
-    /** Large left HUD: overall WPM ({@link GameplayModel#wpmOverall()}). */
+    /** Large left HUD: overall WPM ({@link GameplayModel#wpmOverall()}) */
     private final JLabel hudWpm = new JLabel("0");
-    /** Small sub-label under WPM: live segment WPM ({@link GameplayModel#wpmInstant()}). */
+    /** Small sub-label under WPM: live segment WPM ({@link GameplayModel#wpmInstant()}) */
     private final JLabel hudWpmOverall = new JLabel("Current: 0 WPM");
 
     private final JLabel hudStatAvgWpm = new JLabel("0");
@@ -113,24 +109,20 @@ public final class GameplayPanel extends JPanel {
     private final JLabel hudAcc = new JLabel("100%");
     private final JLabel hudLevel = new JLabel("1");
     private final JLabel hudLives = new JLabel("\u2665".repeat(GameplayModel.STARTING_LIVES));
-    /** Semi-transparent layer over the play area while {@link GameplayModel#isPaused()}. */
+    /** Add a semi-transparent layer over the play area while {@link GameplayModel#isPaused()} */
     private final JPanel pauseOverlay = new JPanel();
-    /** Prevents {@link DocumentListener} recursion when the model rewrites the typing field. */
+    /** Prevents {@link DocumentListener} recursion when the model rewrites the typing field */
     private boolean ignoreTypingDoc;
 
-    /**
-     * At most one pending {@link #syncTypingFromDocumentAfterNotification()} on the EDT. Without this,
-     * each document event (and each programmatic {@code setText}) queues a separate {@code invokeLater},
-     * which can backlog the EDT and make typing appear seconds behind.
-     */
+    /** Make true when a typing-field sync is already scheduled on the EDT */
     private boolean typingSyncScheduled;
  
-    /** ~60 FPS game step; drives {@link GameplayModel#tick(double)} and board repaint. */
+    /** ~60 FPS game step; drives {@link GameplayModel#tick(double)} and board repaint */
     private Timer gameTimer;
-    /** Snapshot for the game-over screen after {@link GameplayModel.Listener#onGameOver()}. */
+    /** Snapshot for the game-over screen after {@link GameplayModel.Listener#onGameOver()} */
     private int lastScore;
  
-    /** Last piece word we showed a typing prompt for (refocus typing when a new word spawns). */
+    /** Last piece word we showed a typing prompt for (refocus typing when a new word spawns) */
     private String lastTypingTargetWord;
 
     private final GameplayAudio audio = new GameplayAudio();
@@ -372,7 +364,7 @@ public final class GameplayPanel extends JPanel {
                 if (pcBefore == null) {
                     return;
                 }
-                // Web blurs input when unlocked; if focus returns to the field, ignore edits here.
+                // Web blurs input when unlocked; if focus returns to the field, ignore edits here
                 if (pcBefore.unlocked) {
                     ignoreTypingDoc = true;
                     try {
@@ -387,7 +379,7 @@ public final class GameplayPanel extends JPanel {
                 String shown = model.currentTypingDisplay();
                 ignoreTypingDoc = true;
                 try {
-                    // Avoid setText when unchanged — it still fires document events and would re-queue work.
+                    // Avoid setText when unchanged — it still fires document events and would re-queue work
                     if (!shown.contentEquals(typing.getText())) {
                         typing.setText(shown);
                     }
@@ -426,13 +418,13 @@ public final class GameplayPanel extends JPanel {
         typingFieldWrap.add(typing);
         typingRow.add(typingFieldWrap, BorderLayout.CENTER);
         typingRow.add(hintTyping, BorderLayout.SOUTH);
-        // CHANGE 4 continued: typingRow goes into belowBoard CENTER; belowBoard goes into playCol SOUTH.
+
         belowBoard.add(typingRow, BorderLayout.CENTER);
         playCol.add(belowBoard, BorderLayout.SOUTH);
  
         center.add(playCol, BorderLayout.CENTER);
  
-        // Top bar: power-ups + pause (slightly separated from playfield like a toolbar)
+        // Top bar where power-ups and pause are located (slightly separated from playfield like a toolbar)
         JPanel topBar = new JPanel(new BorderLayout(8, 0));
         topBar.setOpaque(true);
         topBar.setBackground(TypeTrisTheme.SURFACE_CONTAINER);
@@ -476,7 +468,7 @@ public final class GameplayPanel extends JPanel {
         topEast.add(pauseBtn);
         topBar.add(topEast, BorderLayout.EAST);
  
-        // Stack main layout + pause overlay in one fixed-size band (matches compact desktop layout).
+        // Stack main layout and pause overlay in one fixed-size band (matches compact desktop layout).
         JLayeredPane layered = new JLayeredPane();
         layered.setPreferredSize(new Dimension(VIEWPORT_W, VIEWPORT_H));
         wrapCenter(layered, topBar, center, pauseOverlay);
@@ -488,7 +480,7 @@ public final class GameplayPanel extends JPanel {
         lifeLostFlash.setBounds(VIEWPORT_W / 2 - 170, VIEWPORT_H / 2 - 80, 340, 100);
         layered.add(lifeLostFlash, JLayeredPane.DRAG_LAYER);
 
-        model.startRound(); // start round after UI is built
+        model.startRound(); // Start round after UI is built
  
         installKeyboardActions();
         installPlacementKeyListenerOnPanel();
@@ -506,7 +498,7 @@ public final class GameplayPanel extends JPanel {
 
         // HUD already refreshed by startRound() so fireHud()
  
-        // Centered modal (not GridLayout rows — those stretch each child to half the viewport height).
+        // Dim pause overlay and centered card; GridBagLayout avoids GridLayout stretching rows to half the viewport
         pauseOverlay.setLayout(new GridBagLayout());
         pauseOverlay.setBackground(new Color(0, 0, 0, 190));
         pauseOverlay.setOpaque(true);
@@ -633,7 +625,7 @@ public final class GameplayPanel extends JPanel {
         }
     }
  
-    /** Places the main stack on the default layer and the pause strip on top. */
+    /** Places the main stack on the default layer and the pause strip on top */
     private void wrapCenter(JLayeredPane layered, JPanel topBar, JPanel center, JPanel overlay) {
         JPanel stack = new JPanel(new BorderLayout());
         stack.setOpaque(false);
@@ -647,12 +639,12 @@ public final class GameplayPanel extends JPanel {
         add(layered, BorderLayout.CENTER);
     }
  
-    /** Final score from the last completed run; read by the shell when showing game over. */
+    /** Final score from the last completed run; read by the shell when showing game over */
     public int getLastScore() {
         return lastScore;
     }
  
-    /** Small bordered control matching the neon / high-contrast web buttons. */
+    /** Small bordered control matching the neon / high-contrast web buttons */
     private JButton compactPowerButton(String text, Color bg, Color fg) {
         JButton b = new JButton(text);
         b.setBackground(bg);
@@ -753,7 +745,7 @@ public final class GameplayPanel extends JPanel {
         return p;
     }
 
-    /** Session metrics in a compact inset card (labels left, values right; snug size, left-aligned in HUD). */
+    /** Session metrics in a compact inset card (labels left, values right; snug size, left-aligned in HUD) */
     private JPanel buildSessionStatsSection() {
         JPanel wrap = new JPanel();
         wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
@@ -825,7 +817,7 @@ public final class GameplayPanel extends JPanel {
     }
  
     /**
-     * Right column: lives, level / lines cleared, then combo &amp; streak (matches gameplay.html right HUD).
+     * Right column: lives, level / lines cleared, then combo &amp; streak (matches gameplay.html right HUD)
      */
     private JPanel buildRightColumn() {
         JPanel p = new JPanel();
@@ -881,7 +873,7 @@ public final class GameplayPanel extends JPanel {
         return l;
     }
  
-    /** Copies all HUD labels and the level bar from the model. */
+    /** Updates HUD labels and the typing field from the model */
     private void syncHud() {
         if (model == null) {
             return;
@@ -965,11 +957,7 @@ public final class GameplayPanel extends JPanel {
         }
     }
  
-    /**
-     * Esc → pause only. Do not bind arrows/space here: {@code WHEN_IN_FOCUSED_WINDOW} runs before the
-     * typing field's listeners and would consume arrow keys while the word is still locked, so the caret
-     * could not move (web only handles arrows after unlock — {@code gameplay.js}).
-     */
+    /** Binds Escape for pause and number keys for power-ups */
     private void installKeyboardActions() {
         int cond = JComponent.WHEN_IN_FOCUSED_WINDOW;
         getInputMap(cond).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "esc");
@@ -1011,10 +999,7 @@ public final class GameplayPanel extends JPanel {
         });
     }
 
-    /**
-     * After unlock, focus may be on this panel (see document listener). Arrows/space must still move the
-     * piece; the typing field listener only runs when the field has focus.
-     */
+    /** Handles arrow keys and space when this panel has focus after the word is unlocked */
     private void installPlacementKeyListenerOnPanel() {
         addKeyListener(new KeyAdapter() {
             @Override
@@ -1060,8 +1045,7 @@ public final class GameplayPanel extends JPanel {
     }
  
     /**
-     * After unpause, restore focus so keys work: typing field while the word is locked, otherwise this
-     * panel (placement keys do not run when focus stays on Resume / Pause).
+     * Restores focus after unpause: typing field while the word is locked, otherwise this panel
      */
     private void refocusTypingIfNeeded() {
         if (model == null || model.isOver() || model.isPaused()) {
@@ -1081,19 +1065,19 @@ public final class GameplayPanel extends JPanel {
         });
     }
  
-    /** Call when this panel is shown so typing works immediately. */
+    /** Call when this panel is shown so typing works immediately*/
     public void requestTypingFocus() {
         typing.requestFocusInWindow();
         moveCaretToTypingEnd();
     }
  
-    /** Keep caret at end of the typing field so the next character appends after programmatic {@code setText}. */
+    /** Keep caret at end of the typing field so the next character appends after programmatic {@code setText}*/
     private void moveCaretToTypingEnd() {
         String t = typing.getText();
         typing.setCaretPosition(Math.max(0, t.length()));
     }
  
-    /** Stop the tick timer when leaving the gameplay card to avoid background CPU use. */
+    /** Stop the tick timer when leaving the gameplay card to avoid background CPU use */
     public void stopTimer() {
         if (gameTimer != null) {
             gameTimer.stop();
@@ -1101,17 +1085,20 @@ public final class GameplayPanel extends JPanel {
         audio.shutdown();
     }
  
+    /**
+     * @return the gameplay model for this panel
+     */
     public GameplayModel getModel() {
         return model;
     }
  
-    /** Placeholder for a full in-panel restart; the shell normally rebuilds {@link GameplayPanel} instead. */
+    /** Placeholder for a full in-panel restart; the shell normally rebuilds {@link GameplayPanel} instead */
     public void restartSameLevel() {
         stopTimer();
         removeAll();
     }
  
-    /** Renders the locked grid and the active piece with per-cell styling (typed / wrong / unlocked). */
+    /** Renders the locked grid and the active piece with per-cell styling (typed / wrong / unlocked) */
     private final class BoardCanvas extends JPanel {
         private final int cell = BOARD_CELL_PX;
  

@@ -8,7 +8,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 /**
- * Password hashing helpers (PBKDF2 + random salt).
+ * Password hashing helpers (PBKDF2 + random salt)
  * 
  * @author CS2212 Group 26, Western University
  */
@@ -22,7 +22,7 @@ public final class PasswordUtil {
     }
 
     /**
-     * Generates a new random salt (base64).
+     * Generates a new random salt (base64)
      */
     public static String newSaltBase64() {
         byte[] salt = new byte[16];
@@ -31,7 +31,7 @@ public final class PasswordUtil {
     }
 
     /**
-     * Hashes a password with a base64 salt.
+     * Hashes a password with a base64 salt
      */
     public static String hashBase64(String password, String saltBase64) {
         byte[] salt = Base64.getDecoder().decode(saltBase64);
@@ -48,7 +48,7 @@ public final class PasswordUtil {
     }
 
     /**
-     * Compares input password against expected hash and salt.
+     * Compares input password against expected hash and salt
      */
     public static boolean verify(String rawPassword, String saltBase64, String expectedHashBase64) {
         String actual = hashBase64(rawPassword, saltBase64);

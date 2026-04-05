@@ -7,8 +7,9 @@ import typetris.backend.AuthRepository;
 import typetris.ui.UserInterface;
 
 /**
- * Application entry point for Type-tris.
- * Opens the Swing desktop UI and uses the local SQLite database.
+ * Application entry point for Type-Tris
+ * <p>
+ * Opens the Swing desktop UI and uses the local SQLite database
  *
  * @author CS2212 Group 26, Western University
  */
@@ -18,7 +19,7 @@ public final class App {
     }
 
     /**
-     * Initializes persistence and launches {@link UserInterface} on the Swing EDT.
+     * Initializes persistence and launches {@link UserInterface} on the Swing EDT
      *
      * @param args unused
      */

@@ -4,8 +4,10 @@ import java.awt.Color;
 import java.awt.Font;
 
 /**
- * Design tokens aligned with the former Tailwind theme (see {@code web/assets/js/tailwind.config.js}).
- * Use these for backgrounds, borders, and accent text on Swing components instead of hard-coded hex values.
+ * Design tokens aligned with the former Tailwind theme (see {@code web/assets/js/tailwind.config.js})
+ * Use these for backgrounds, borders, and accent text on Swing components instead of hard-coded hex values
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class TypeTrisTheme {
 
@@ -32,10 +34,17 @@ public final class TypeTrisTheme {
     public static final Color ERROR = new Color(0xff6e84);
     public static final Color YELLOW_MEDIUM = new Color(0xfde047);
 
+    /** Prevents instantiation */
     private TypeTrisTheme() {
     }
 
-    /** Headline: prefer a geometric sans; falls back to system sans. */
+    /**
+     * Headline font: geometric sans when available, otherwise a system sans-serif
+     *
+     * @param size point size
+     * @param style {@link Font} style constant (for example {@link Font#BOLD})
+     * @return a suitable headline {@link Font}
+     */
     public static Font headline(float size, int style) {
         String[] candidates = { "Space Grotesk", "Segoe UI", "San Francisco", "Helvetica Neue", "Arial" };
         for (String name : candidates) {
@@ -47,6 +56,13 @@ public final class TypeTrisTheme {
         return new Font(Font.SANS_SERIF, style, Math.round(size));
     }
 
+    /**
+     * Body text font
+     *
+     * @param size point size
+     * @param style {@link Font} style constant
+     * @return a suitable body {@link Font}
+     */
     public static Font body(float size, int style) {
         String[] candidates = { "Manrope", "Segoe UI", "Arial" };
         for (String name : candidates) {
@@ -58,6 +74,13 @@ public final class TypeTrisTheme {
         return new Font(Font.SANS_SERIF, style, Math.round(size));
     }
 
+    /**
+     * Label / UI control font
+     *
+     * @param size point size
+     * @param style {@link Font} style constant
+     * @return a suitable label {@link Font}
+     */
     public static Font label(float size, int style) {
         String[] candidates = { "Plus Jakarta Sans", "Segoe UI Semibold", "Arial" };
         for (String name : candidates) {

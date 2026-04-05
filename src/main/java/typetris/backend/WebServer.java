@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimal local HTTP server for static web UI and authentication API.
+ * Minimal local HTTP server for static web UI and authentication API
  * 
  * @author CS2212 Group 26, Western University
  */
@@ -39,13 +39,13 @@ public final class WebServer {
     }
 
     /**
-     * Starts the server and initializes schema.
+     * Starts the server and initializes schema
      *
      * <p>
      * Routes include {@code POST /api/register}, {@code POST /api/login}, parent
      * admin
      * POST endpoints, {@code GET /api/personal-stats}, {@code GET /api/leaderboard},
-     * and {@code POST /api/game-result}.
+     * and {@code POST /api/game-result}
      */
     public void start() throws IOException, SQLException {
         authRepository.init();
@@ -380,8 +380,8 @@ public final class WebServer {
     }
 
     /**
-     * Persists score / WPM / accuracy for the logged-in player (identified by username).
-     * Not cryptographically authenticated; suitable for local / coursework use.
+     * Persists score / WPM / accuracy for the logged-in player (identified by username)
+     * Not cryptographically authenticated; suitable for local / coursework use
      */
     private final class GameResultHandler implements HttpHandler {
         @Override

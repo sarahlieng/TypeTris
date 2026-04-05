@@ -52,13 +52,13 @@ import typetris.gameplay.GameplayPanel;
 
 /**
  * Desktop shell for Type-tris: one {@link JFrame} with a {@link CardLayout}
- * root.
- * Main menu, combined sign-in / account creation, player hub, statistics,
+ * root;
+ * main menu, combined sign-in / account creation, player hub, statistics,
  * leaderboard,
  * instructions, parental PIN gate and admin tools, and {@link GameplayPanel}
  * after difficulty
- * selection. Data reads and writes go through {@link AuthRepository} (local
- * SQLite).
+ * selection; data reads and writes go through {@link AuthRepository} (local
+ * SQLite)
  */
 public final class UserInterface extends JFrame {
 
@@ -84,7 +84,7 @@ public final class UserInterface extends JFrame {
     private final JPanel root = new JPanel(cards);
 
     /**
-     * currently authenticated username, or {@code null} on main menu after logout.
+     * currently authenticated username, or {@code null} on main menu after logout
      */
     private String loggedInUser;
 
@@ -105,7 +105,7 @@ public final class UserInterface extends JFrame {
     private static final String AUTH_VIEW_SIGNIN = "authSignin";
     private static final String AUTH_VIEW_REGISTER = "authRegister";
 
-    /** Swaps sign-in vs create-account on the PLAY card. */
+    /** Swaps sign-in vs create-account on the PLAY card */
     private JPanel authModePanel;
 
     private final DefaultTableModel leaderboardModel = new DefaultTableModel(
@@ -128,21 +128,21 @@ public final class UserInterface extends JFrame {
 
     private final JTable leaderboardTable = new JTable(leaderboardModel);
 
-    /** Host panel for {@link GameplayPanel}; swapped on each new run. */
+    /** Host panel for {@link GameplayPanel}; swapped on each new run */
     private final JPanel gameplayHost = new JPanel(new BorderLayout());
 
-    /** Active session, or {@code null} when not on the gameplay card. */
+    /** Active session, or {@code null} when not on the gameplay card */
     private GameplayPanel activeGameplay;
 
     /**
      * Last-started tier / sub-level (1–3); used for restart and new
-     * {@link GameplayPanel} instances.
+     * {@link GameplayPanel} instances
      */
     private String gameTier = "easy";
 
     private int gameSubLevel = 1;
 
-    /** [tier index 0–2][level index 0–2] for unlock refresh. */
+    /** [tier index 0–2][level index 0–2] for unlock refresh */
     private final JButton[][] diffButtons = new JButton[3][3];
 
     private final JLabel gameOverScore = new JLabel("0");
@@ -183,8 +183,8 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * Shows a card by name and runs light per-screen refresh (e.g. player welcome
-     * label).
+     * Shows a card by name and runs light per-screen refresh (for example player welcome
+     * label)
      */
     private void showCard(String name) {
         cards.show(root, name);
@@ -262,7 +262,7 @@ public final class UserInterface extends JFrame {
         }
     }
 
-    /** Routes {@link GameplayPanel} top-bar / game-over navigation. */
+    /** Routes {@link GameplayPanel} top-bar / game-over navigation */
     private void onGameplayNavigate(String screen) {
         if (Screens.GAME_OVER.equals(screen)) {
             int s = activeGameplay != null ? activeGameplay.getLastScore() : 0;
@@ -319,7 +319,7 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * Soft radial backdrop plus bordered surface panel for each full-screen card.
+     * Soft radial backdrop plus bordered surface panel for each full-screen card
      */
     private JPanel themedCard(JPanel inner) {
         JPanel shell = new GradientBackdrop();
@@ -363,7 +363,7 @@ public final class UserInterface extends JFrame {
         ButtonRolloverSupport.install(b, TypeTrisTheme.SURFACE_CONTAINER_LOW);
     }
 
-    /** “Create account” call-to-action on the sign-in screen. */
+    /** “Create account” call-to-action on the sign-in screen */
     private void styleCreateAccountButton(JButton b) {
         b.setFont(TypeTrisTheme.label(12f, Font.BOLD));
         b.setBackground(TypeTrisTheme.SURFACE_CONTAINER_HIGH);
@@ -400,7 +400,7 @@ public final class UserInterface extends JFrame {
         f.setFont(TypeTrisTheme.body(compact ? 13f : 14f, Font.PLAIN));
     }
 
-    /** Fixed column width for sign-in / register so fields and CTAs line up. */
+    /** Fixed column width for sign-in / register so fields and CTAs line up */
     private static final int AUTH_FORM_W = 320;
     private static final int AUTH_FIELD_H = 42;
     private static final int AUTH_PRIMARY_BTN_H = 46;
@@ -415,7 +415,7 @@ public final class UserInterface extends JFrame {
         f.setMaximumSize(fixed);
     }
 
-    /** Full-width primary CTA in the auth card (same width as fields). */
+    /** Full-width primary CTA in the auth card (same width as fields) */
     private static void bindAuthPrimaryButton(JButton b) {
         Dimension d = new Dimension(AUTH_FORM_W, AUTH_PRIMARY_BTN_H);
         b.setPreferredSize(d);
@@ -424,7 +424,7 @@ public final class UserInterface extends JFrame {
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 
-    /** Full-width secondary / outline CTA matching auth column width. */
+    /** Full-width secondary / outline CTA matching auth column width */
     private static void bindAuthOutlineButton(JButton b) {
         Dimension d = new Dimension(AUTH_FORM_W, AUTH_OUTLINE_BTN_H);
         b.setPreferredSize(d);
@@ -433,7 +433,7 @@ public final class UserInterface extends JFrame {
         b.setAlignmentX(Component.CENTER_ALIGNMENT);
     }
 
-    /** Larger, calmer inputs for the auth screens. */
+    /** Larger, calmer inputs for the auth screens */
     private void styleAuthInput(JTextField f) {
         styleTextField(f, true);
         f.setFont(TypeTrisTheme.body(14f, Font.PLAIN));
@@ -485,7 +485,7 @@ public final class UserInterface extends JFrame {
     /**
      * Same as {@link #styleDataTable} but removes the focused-cell outline (often a
      * yellow ring on macOS)
-     * while keeping row selection fill colors.
+     * while keeping row selection fill colors
      */
     private void styleAdminAccountsTable(JTable t) {
         styleDataTable(t);
@@ -539,10 +539,10 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * Username and email get the bulk of width; sessions stays compact. Extra table
+     * Username and email get the bulk of width; sessions stays compact; extra table
      * width is spread
      * across all columns proportionally so “Last session” does not absorb the
-     * entire slack.
+     * entire slack
      */
     private void configureParentAccountsTableColumns(JTable t) {
         t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -558,7 +558,7 @@ public final class UserInterface extends JFrame {
         c3.setPreferredWidth(188);
     }
 
-    /** Column widths for global high-score table (rank compact; username gets slack). */
+    /** Column widths for global high-score table (rank compact; username gets slack) */
     private void configureLeaderboardTableColumns(JTable t) {
         t.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         t.getColumnModel().getColumn(0).setPreferredWidth(56);
@@ -579,7 +579,7 @@ public final class UserInterface extends JFrame {
 
     /**
      * Shared shell for parent “Admin accounts” and {@link #buildLeaderboardPanel()}: headline + tool row,
-     * themed scroll table, bottom action bar.
+     * themed scroll table, bottom action bar
      */
     private JPanel buildThemedTableScreen(String headline, JComponent topTools, JTable table, JComponent bottomBar) {
         JPanel p = new JPanel(new BorderLayout(0, 8));
@@ -1411,7 +1411,7 @@ public final class UserInterface extends JFrame {
         return buildThemedTableScreen("ADMIN ACCOUNTS", tools, parentTable, bottom);
     }
 
-    /** Admin-only: create a user from a dialog; stays on the accounts screen. */
+    /** Admin-only: create a user from a dialog; stays on the accounts screen */
     private void adminCreateNewAccount() {
         JTextField email = new JTextField();
         JTextField user = new JTextField();
@@ -1511,7 +1511,7 @@ public final class UserInterface extends JFrame {
 
     /**
      * Admin-only: zero out competitive stats for every user after confirmation and
-     * PIN check.
+     * PIN check
      */
     private void adminResetGlobalHighScores() {
         int confirm = JOptionPane.showConfirmDialog(
@@ -1554,7 +1554,7 @@ public final class UserInterface extends JFrame {
 
     /**
      * Shows rolling stats for the table selection (same fields as the player
-     * Statistics screen).
+     * Statistics screen)
      */
     private void viewStatsForSelectedPlayer() {
         int row = parentTable.getSelectedRow();
@@ -1600,7 +1600,7 @@ public final class UserInterface extends JFrame {
         }
     }
 
-    /** deletes the selected account after PIN confirmation. */
+    /** deletes the selected account after PIN confirmation */
     private void deleteSelectedParentUser() {
         int row = parentTable.getSelectedRow();
         if (row < 0) {
@@ -1628,7 +1628,7 @@ public final class UserInterface extends JFrame {
 
     /**
      * sets a new password hash for the selected user (admin PIN + new password
-     * prompts).
+     * prompts)
      */
     private void resetSelectedPassword() {
         int row = parentTable.getSelectedRow();
@@ -1863,7 +1863,7 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * Classic T-tetromino (three blocks on top, stem down) as a simple branded graphic for the main menu.
+     * Classic T-tetromino (three blocks on top, stem down) as a simple branded graphic for the main menu
      */
     private static final class MenuTetrominoGraphic extends JPanel {
         private static final int CELL = 20;
@@ -1903,7 +1903,7 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * Radial wash + soft accent blobs behind each screen card.
+     * Radial wash + soft accent blobs behind each screen card
      */
     private static final class GradientBackdrop extends JPanel {
         GradientBackdrop() {
@@ -1942,7 +1942,7 @@ public final class UserInterface extends JFrame {
     }
 
     /**
-     * shows the main window on the Swing event dispatch thread.
+     * shows the main window on the Swing event dispatch thread
      */
     public static void launch(AuthRepository auth) {
         SwingUtilities.invokeLater(() -> new UserInterface(auth).setVisible(true));
