@@ -1,13 +1,5 @@
 package com.mycompany.studenttesting;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -23,6 +15,13 @@ import java.util.UUID;
 
 import javax.swing.JButton;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,37 +48,54 @@ import typetris.ui.UiButtonStyles;
 import typetris.ui.UserInterface;
 
 /**
- * JUnit 5 tests for Type-Tris ({@code group26} / {@code typetris}).
- * Mix of black-box (public API outcomes) and white-box (boundaries, reflection for private rules).
- * Swing-heavy screens are covered with light construction / headless-safe checks only.
+ * JUnit 5 test suite for the Type-Tris application ({@code typetris}, CS2212 group 26).
+ * <p>
+ * Coverage emphasises business logic and persistence: scoring, authentication, game rules,
+ * parental controls, and related utilities. Full interactive Swing flows are out of scope;
+ * tests use public APIs where possible, and reflection only when behaviour is not reachable
+ * otherwise (for example, private line-clear logic). Lightweight checks confirm that selected
+ * UI components can be constructed in headless mode.
+ * <p>
+ * Tests are grouped with {@code @Nested} classes by subsystem. Execute from the {@code StudentTest}
+ * module with {@code mvn test}. Install the main {@code type-tris} artifact locally first
+ * ({@code mvn install} from the parent project) if the dependency is not already in your Maven
+ * repository.
  */
 class StudentTest {
 
+    /**
+     * Enables headless AWT/Swing so tests run in environments without a graphical display
+     * (for example, CI servers).
+     */
     @BeforeAll
     static void setUpClass() {
         System.setProperty("java.awt.headless", "true");
     }
 
-    // ── shared reflection helpers (GameplayModel line-clear rules) ─────────────────────────────
+    // ── GameplayModel: reflection helpers for state that is not exposed publicly ────────────────
 
+    /** Sets a private {@code int} field on the model for controlled test scenarios. */
     private static void setIntField(GameplayModel target, String name, int value) throws Exception {
         Field f = GameplayModel.class.getDeclaredField(name);
         f.setAccessible(true);
         f.setInt(target, value);
     }
 
+    /** Same as {@link #setIntField(GameplayModel, String, int)} for {@code long} fields (e.g. typing clock). */
     private static void setLongField(GameplayModel target, String name, long value) throws Exception {
         Field f = GameplayModel.class.getDeclaredField(name);
         f.setAccessible(true);
         f.setLong(target, value);
     }
 
+    /** Invokes private {@code clearFullLines} to verify scoring and grid behaviour without a full play session. */
     private static void invokeClearFullLines(GameplayModel m) throws Exception {
         Method meth = GameplayModel.class.getDeclaredMethod("clearFullLines");
         meth.setAccessible(true);
         meth.invoke(m);
     }
 
+    /** Minimal {@link GameplayModel.Listener} implementation; tests focus on model state, not UI callbacks. */
     private static GameplayModel.Listener silentListener() {
         return new GameplayModel.Listener() {
             @Override
@@ -93,6 +109,7 @@ class StudentTest {
         };
     }
 
+    /** Verifies the application entry class exposes {@code main} and is declared {@code final}. */
     @Nested
     @DisplayName("App")
     class AppTests {
@@ -104,6 +121,11 @@ class StudentTest {
         }
     }
 
+    /**
+     * Uses an isolated SQLite database per test (temporary directory) so the production
+     * {@code data/type-tris.db} file is never modified. Covers account creation, credential lookup,
+     * password verification, session history, and monotonic high-score updates.
+     */
     @Nested
     @DisplayName("AuthRepository & PasswordUtil")
     class AuthTests {
@@ -162,6 +184,7 @@ class StudentTest {
         }
     }
 
+    /** Ensures {@link CompletedRunStats} record accessors match constructor arguments. */
     @Nested
     @DisplayName("CompletedRunStats")
     class CompletedRunStatsTests {
@@ -180,6 +203,7 @@ class StudentTest {
         }
     }
 
+    /** Validates leaderboard ordering against persisted user scores in a real database. */
     @Nested
     @DisplayName("Leaderboard")
     class LeaderboardTests {
@@ -207,6 +231,7 @@ class StudentTest {
         }
     }
 
+    /** Tests {@link PlayerAccount#formatPlayTime(long)} and related display helpers, including edge cases. */
     @Nested
     @DisplayName("PlayerAccount")
     class PlayerAccountTests {
@@ -227,6 +252,7 @@ class StudentTest {
         }
     }
 
+    /** Integration smoke test: start and stop {@link WebServer} on a temporary web root and database. */
     @Nested
     @DisplayName("WebServer")
     class WebServerTests {
@@ -248,6 +274,10 @@ class StudentTest {
         }
     }
 
+    /**
+     * Core gameplay logic: typing input, levels, WPM calculations, and line clearing. Reflection
+     * is used only where no public API exposes the behaviour under test (for example, {@code clearFullLines}).
+     */
     @Nested
     @DisplayName("GameplayModel")
     class GameplayModelTests {
@@ -294,7 +324,8 @@ class StudentTest {
             GameplayModel m = new GameplayModel("easy", 1, 0, silentListener());
             m.startRound();
             String w = m.getPiece().word;
-            // Must differ from target's second letter when present, or "TA" can match "TAB" and no mistake fires
+            // Wrong letter must differ from the target's second character when present, otherwise the
+            // two-character input can match a valid prefix (e.g. "TA" for "TAB") and no mistake is recorded.
             char wrong = 'A';
             for (char c = 'A'; c <= 'Z'; c++) {
                 if (w.length() < 2 || c != w.charAt(1)) {
@@ -329,6 +360,10 @@ class StudentTest {
         }
     }
 
+    /**
+     * Headless smoke test: constructs {@link GameplayPanel} to verify initialization succeeds without
+     * a display or manual interaction.
+     */
     @Nested
     @DisplayName("GameplayPanel (headless smoke)")
     class GameplayPanelTests {
@@ -348,6 +383,7 @@ class StudentTest {
         }
     }
 
+    /** Ensures {@link GameplayAudio#shutdown()} completes cleanly when background audio was never started. */
     @Nested
     @DisplayName("GameplayAudio")
     class GameplayAudioTests {
@@ -360,6 +396,10 @@ class StudentTest {
         }
     }
 
+    /**
+     * Parental control and {@link TimeRange}: permitted play windows, session recording, aggregates,
+     * and validation of invalid inputs (inverted time ranges, negative durations, and similar cases).
+     */
     @Nested
     @DisplayName("ParentalControl & TimeRange")
     class ParentalTests {
@@ -423,10 +463,15 @@ class StudentTest {
         }
     }
 
+    /**
+     * {@link ClientPrefs} persistence for best scores and sub-level progress. Each test uses a
+     * unique synthetic username to avoid cross-test interference in shared preference storage.
+     */
     @Nested
     @DisplayName("ClientPrefs")
     class ClientPrefsTests {
 
+        /** Returns a unique username for isolated preference keys per test case. */
         private String user() {
             return "cp_" + UUID.randomUUID().toString().replace("-", "");
         }
@@ -455,6 +500,7 @@ class StudentTest {
         }
     }
 
+    /** Verifies {@link Screens} navigation constants used with {@code CardLayout} remain defined. */
     @Nested
     @DisplayName("Screens")
     class ScreensTests {
@@ -467,6 +513,7 @@ class StudentTest {
         }
     }
 
+    /** Basic checks on {@link TypeTrisTheme} colours and font factory methods. */
     @Nested
     @DisplayName("TypeTrisTheme")
     class TypeTrisThemeTests {
@@ -483,6 +530,7 @@ class StudentTest {
         }
     }
 
+    /** Applies {@link UiButtonStyles} and {@link ButtonRolloverSupport} to a {@link JButton} in headless mode. */
     @Nested
     @DisplayName("UiButtonStyles & ButtonRolloverSupport")
     class ButtonStyleTests {
@@ -502,6 +550,10 @@ class StudentTest {
         }
     }
 
+    /**
+     * {@code InstructionsScreens} is package-private; reflection invokes {@code createWizard} to confirm
+     * a {@link javax.swing.JPanel} is returned without error.
+     */
     @Nested
     @DisplayName("InstructionsScreens (package-private)")
     class InstructionsScreensTests {
@@ -517,6 +569,7 @@ class StudentTest {
         }
     }
 
+    /** Confirms {@link UserInterface} is public and declares {@code launch(AuthRepository)}; does not start the UI. */
     @Nested
     @DisplayName("UserInterface")
     class UserInterfaceTests {
