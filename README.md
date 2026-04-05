@@ -254,12 +254,12 @@ On first launch, the application will:
  
 ### Accessing Parental Controls
  
-1. Login with an **admin account** (see Account Information above)
+1. Login with an Parental/Teacher account with code: 2212
 2. Navigate to the **Admin Panel** from the player menu
 3. Admin features available:
    - **View all player statistics**
    - **Reset global leaderboard**
-   - **Clear local score data**
+   - **Delete/create accounts**
  
 ### Admin Features
  
@@ -267,21 +267,7 @@ On first launch, the application will:
 |---------|-------------|
 | View Statistics | See all registered players and their stats |
 | Reset Leaderboard | Clear all high scores from the database |
-| Clear Local Data | Reset cached preferences and unlock progress |
- 
-### Setting Up an Admin Account
- 
-Admin accounts are created directly in the database. To promote a user to admin:
- 
-1. Open the database file: `data/type-tris.db`
-2. Using a SQLite browser (like DB Browser for SQLite):
-   ```sql
-   UPDATE users SET is_admin = 1 WHERE username = 'desired_username';
-   ```
- 
----
- 
-## Additional Notes for TAs
+| Delete/Create accounts | Delete existing account from database or create new accounts |
  
 ### Project Structure
  
