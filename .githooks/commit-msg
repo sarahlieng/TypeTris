@@ -1,0 +1,13 @@
+#!/bin/sh
+# Removes Cursor commit footers before the message is recorded.
+# Enable once per clone:  git config core.hooksPath .githooks
+msg="$1"
+[ -z "$msg" ] || [ ! -f "$msg" ] && exit 0
+if grep -qE '^Made-with:' "$msg" 2>/dev/null; then
+    if sed --version >/dev/null 2>&1; then
+        sed -i '/^Made-with:/d' "$msg"
+    else
+        sed -i '' '/^Made-with:/d' "$msg"
+    fi
+fi
+exit 0
