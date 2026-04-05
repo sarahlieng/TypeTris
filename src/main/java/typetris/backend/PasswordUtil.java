@@ -18,14 +18,12 @@ public final class PasswordUtil {
     private static final int ITERATIONS = 65_536;
     private static final int KEY_LENGTH = 256;
 
-    /** Prevents instantiation; use static helpers only. */
+    /** Prevents instantiation; use static helpers only */
     private PasswordUtil() {
     }
 
     /**
-     * Generates a new random salt (Base64, 16 bytes).
-     *
-     * @return salt safe to store beside the password hash
+     * Generates a new random salt (base64)
      */
     public static String newSaltBase64() {
         byte[] salt = new byte[16];
@@ -36,7 +34,7 @@ public final class PasswordUtil {
     /**
      * Hashes a password with PBKDF2 and a Base64 salt.
      *
-     * @param password plaintext (cleared from the spec after use)
+     * @param password   plaintext (cleared from the spec after use)
      * @param saltBase64 salt from {@link #newSaltBase64()}
      * @return Base64-encoded derived key
      */
@@ -57,8 +55,8 @@ public final class PasswordUtil {
     /**
      * Compares input password against expected hash and salt.
      *
-     * @param rawPassword user entry
-     * @param saltBase64 stored salt
+     * @param rawPassword        user entry
+     * @param saltBase64         stored salt
      * @param expectedHashBase64 stored hash
      * @return {@code true} if the recomputed hash matches
      */
@@ -72,7 +70,8 @@ public final class PasswordUtil {
      *
      * @param a first base64 hash string
      * @param b second base64 hash string
-     * @return {@code true} if both non-null, same length, and equal codepoint-for-codepoint
+     * @return {@code true} if both non-null, same length, and equal
+     *         codepoint-for-codepoint
      */
     private static boolean constantTimeEquals(String a, String b) {
         if (a == null || b == null || a.length() != b.length()) {

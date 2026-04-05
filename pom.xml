@@ -66,6 +66,25 @@
                     <mainClass>typetris.App</mainClass>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
+                <configuration>
+                    <source>${maven.compiler.release}</source>
+                    <outputDirectory>${project.basedir}/javadoc</outputDirectory>
+                    <encoding>UTF-8</encoding>
+                    <charset>UTF-8</charset>
+                    <docencoding>UTF-8</docencoding>
+                    <windowtitle>Type-Tris ${project.version}</windowtitle>
+                    <doctitle>Type-Tris API (${project.version})</doctitle>
+                    <bottom>CS2212 Group 26, Western University</bottom>
+                    <additionalOptions>
+                        <additionalOption>-Xdoclint:all,-missing</additionalOption>
+                    </additionalOptions>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

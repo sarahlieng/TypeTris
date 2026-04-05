@@ -5,3 +5,6 @@ target/
 data/*.db
 # macOS
 .DS_Store
+
+# JavaDoc
+javadoc/

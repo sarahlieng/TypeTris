@@ -15,7 +15,7 @@ import typetris.ui.UserInterface;
  */
 public final class App {
 
-    /** Prevents instantiation; entry is via {@link #main(String[])} only. */
+    /** Prevents instantiation; entry is via {@link #main(String[])} only */
     private App() {
     }
 
@@ -25,7 +25,8 @@ public final class App {
      * @param args unused
      */
     public static void main(String[] args) {
-        // Prefer native window chrome; failures are non-fatal (Metal / Windows / GTK default).
+        // Prefer native window chrome; failures are non-fatal (Metal / Windows / GTK
+        // default).
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
