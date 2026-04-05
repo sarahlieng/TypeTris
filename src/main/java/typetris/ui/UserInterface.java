@@ -926,10 +926,24 @@ public final class UserInterface extends JFrame {
         regBrand.setFont(TypeTrisTheme.headline(26f, Font.BOLD));
         regBrand.setForeground(TypeTrisTheme.PRIMARY);
 
-        JPanel regHeader = new JPanel(new BorderLayout(16, 0));
+        JPanel regWestDock = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        regWestDock.setOpaque(false);
+        regWestDock.add(regBack);
+        int regHeaderBarH = Math.max(44, regWestDock.getPreferredSize().height);
+        int regSideDockW = Math.max(112, regWestDock.getPreferredSize().width + 16);
+        regWestDock.setPreferredSize(new Dimension(regSideDockW, regHeaderBarH));
+        regWestDock.setMinimumSize(new Dimension(regSideDockW, regHeaderBarH));
+
+        JPanel regEastDock = new JPanel();
+        regEastDock.setOpaque(false);
+        regEastDock.setPreferredSize(new Dimension(regSideDockW, regHeaderBarH));
+        regEastDock.setMinimumSize(new Dimension(regSideDockW, regHeaderBarH));
+
+        JPanel regHeader = new JPanel(new BorderLayout(0, 0));
         regHeader.setOpaque(false);
-        regHeader.add(regBack, BorderLayout.WEST);
+        regHeader.add(regWestDock, BorderLayout.WEST);
         regHeader.add(regBrand, BorderLayout.CENTER);
+        regHeader.add(regEastDock, BorderLayout.EAST);
 
         JPanel regCol = new JPanel();
         regCol.setLayout(new BoxLayout(regCol, BoxLayout.Y_AXIS));
@@ -951,28 +965,28 @@ public final class UserInterface extends JFrame {
         regCol.add(regSub);
         regCol.add(Box.createVerticalStrut(20));
 
-        e1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        e1.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(e1);
         regCol.add(Box.createVerticalStrut(6));
-        email.setAlignmentX(Component.LEFT_ALIGNMENT);
+        email.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(email);
         regCol.add(Box.createVerticalStrut(12));
-        u1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        u1.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(u1);
         regCol.add(Box.createVerticalStrut(6));
-        regUser.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regUser.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(regUser);
         regCol.add(Box.createVerticalStrut(12));
-        p1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p1.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(p1);
         regCol.add(Box.createVerticalStrut(6));
-        regPass.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regPass.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(regPass);
         regCol.add(Box.createVerticalStrut(12));
-        c1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        c1.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(c1);
         regCol.add(Box.createVerticalStrut(6));
-        regConfirm.setAlignmentX(Component.LEFT_ALIGNMENT);
+        regConfirm.setAlignmentX(Component.CENTER_ALIGNMENT);
         regCol.add(regConfirm);
         regCol.add(Box.createVerticalStrut(22));
         regCol.add(regOk);
@@ -1002,8 +1016,8 @@ public final class UserInterface extends JFrame {
         rg.gridy = 0;
         rg.weightx = 1;
         rg.weighty = 1;
-        rg.anchor = GridBagConstraints.NORTH;
-        rg.insets = new Insets(4, 0, 32, 0);
+        rg.anchor = GridBagConstraints.CENTER;
+        rg.insets = new Insets(16, 0, 40, 0);
         regCenter.add(regCard, rg);
 
         JPanel registerTab = new JPanel(new BorderLayout(0, 0));
