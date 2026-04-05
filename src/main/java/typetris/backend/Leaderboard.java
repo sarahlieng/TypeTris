@@ -4,10 +4,10 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Provides global high-score ordering for the UI.
+ * Provides global high-score ordering for the UI
  *
  * <p>This is currently backed by the `users` table and returns a list of
- * lightweight `PlayerAccount` views suitable for displaying a leaderboard.
+ * lightweight `PlayerAccount` views suitable for displaying a leaderboard
  * 
  * @author CS2212 Group 26, Western University
  */

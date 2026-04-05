@@ -11,33 +11,17 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Core typing + Tetris rules ported from {@code web/assets/js/gameplay.js}.
+ * Core typing and Tetris rules for one game session
  * <p>
- * One active {@link Piece} falls on a timer; the player types its word to unlock movement/rotation, then
- * locks it to the grid, clears full rows, and advances score / streak multipliers until top-out.
- *
- * <p>HUD field mapping (matches {@code gameplay.html} element IDs):
- * <ul>
- *   <li>{@code #hud-score}            — {@link #getScore()}</li>
- *   <li>{@code #hud-best-score}       — {@link #getBestDisplayed()}</li>
- *   <li>{@code #hud-wpm}              — {@link #wpmInstant()} (the large, live WPM counter)</li>
- *   <li>{@code #hud-wpm-overall}      — {@link #wpmOverall()} (shown as "Overall: X WPM" sub-label)</li>
- *   <li>{@code #hud-control-phase}    — {@link #controlPhaseLabel()}</li>
- *   <li>{@code #hud-current-level}    — {@link #runLevelFromLines()}</li>
- *   <li>{@code #hud-lines-cleared}    — {@link #getLinesCleared()}</li>
- *   <li>{@code #hud-level-progress-fill} — {@link #levelProgressPercent()}</li>
- *   <li>{@code #hud-streak}           — {@link #getLineStreak()}</li>
- *   <li>{@code #hud-combo-multiplier} — {@link #getMult()} formatted as "xN"</li>
- *   <li>{@code #hud-accuracy}         — {@link #accuracyPercent()} formatted as "N%"</li>
- * </ul>
+ * Behavior follows the web client in {@code web/assets/js/gameplay.js}
  */
 public final class GameplayModel {
 
     public static final int COLS = 10;
     public static final int ROWS = 16;
-    /** Run "level" in the HUD steps every this many line clears. */
+    /** Run "level" in the HUD steps every this many line clears */
     public static final int LINES_PER_LEVEL = 5;
-    /** Typing mistakes cost one life each; at zero lives the run ends (stack top-out also ends the run). */
+    /** Typing mistakes cost one life each; at zero lives the run ends (stack top-out also ends the run) */
     public static final int STARTING_LIVES = 5;
 
     public interface Listener {
@@ -45,10 +29,10 @@ public final class GameplayModel {
 
         void onHudChanged();
 
-        /** Called once when the run ends; stats are readable via getters. */
+        /** Called once when the run ends; stats are readable via getters */
         void onGameOver();
 
-        /** Mirrors {@code ensureAudioStarted()} on typing / movement keys in {@code gameplay.js}. */
+        /** Mirrors {@code ensureAudioStarted()} on typing / movement keys in {@code gameplay.js} */
         default void onAudioUserActivity() {}
 
         default void onAudioBlockLand() {}
@@ -59,11 +43,11 @@ public final class GameplayModel {
 
         default void onAudioTypingError() {}
 
-        /** Called after a typing error when {@code livesRemaining} is still &gt; 0 (HUD / brief flash). */
+        /** Called after a typing error when {@code livesRemaining} is still &gt; 0 (HUD / brief flash) */
         default void onLifeLost(int livesRemaining) {}
     }
 
-    /** Loaded once from {@code /typetris/wordbank.txt}; fallback list if the resource is missing. */
+    /** Loaded once from {@code /typetris/wordbank.txt}; fallback list if the resource is missing */
     private static List<String> wordList = List.of("TYPE", "WORD", "GAME");
 
     static {
@@ -84,19 +68,15 @@ public final class GameplayModel {
         }
     }
 
-    /** Fall speed (rows/sec) and word length bounds for a tier + sub-level (1–3). */
+    /** Fall speed (rows/sec) and word length bounds for a tier + sub-level (1–3) */
     public record Params(double fallRowsPerSec, int lenMin, int lenMax) {}
 
     /**
-     * Mirrors the difficulty table in {@code gameplay.js}.
-     * <pre>
-     * Tier   | base fall | lenMin | lenMax (base)
-     * -------|-----------|--------|---------------
-     * easy   | 0.40      | 3      | 4
-     * medium | 0.75      | 5      | 5
-     * hard   | 1.25      | 6      | 7
-     * </pre>
-     * Each sub-level (1–3) adds 0.20 rows/sec and +1 to both length bounds.
+     * Fall speed and word length bounds for the chosen tier and sub-level
+     *
+     * @param tier difficulty name (for example easy, medium, hard)
+     * @param subLevel sub-level from 1 to 3
+     * @return parameters for this difficulty
      */
     public static Params difficultyParams(String tier, int subLevel) {
         String t = tier == null ? "easy" : tier.toLowerCase();
@@ -129,7 +109,7 @@ public final class GameplayModel {
         return new Params(fallRowsPerSec, lenMin, lenMax);
     }
 
-    /** One letter cell in a polyomino-shaped word piece; {@code wi} indexes into the target word. */
+    /** One letter cell in a polyomino-shaped word piece; {@code wi} indexes into the target word */
     public static final class Part {
         public int x;
         public int y;
@@ -143,12 +123,13 @@ public final class GameplayModel {
             this.wi = wi;
         }
 
+        /** Returns a duplicate for rotation / collision checks without mutating the live piece */
         public Part copy() {
             return new Part(x, y, ch, wi);
         }
     }
 
-    /** Falling word piece: absolute grid position plus typing progress and timing for WPM segments. */
+    /** Falling word piece: absolute grid position plus typing progress and timing for WPM segments */
     public static final class Piece {
         public String word;
         public List<Part> parts;
@@ -166,7 +147,7 @@ public final class GameplayModel {
         }
     }
 
-    /** Immutable letter stored in the grid after a piece locks. */
+    /** Immutable letter stored in the grid after a piece locks */
     public record LockedCell(char ch) {}
 
     // ── runtime state ────────────────────────────────────────────────────────
@@ -194,16 +175,16 @@ public final class GameplayModel {
     private double fallAccum;
     private Piece piece;
 
-    /** Active play time this run (pause excluded), in milliseconds. */
+    /** Active play time this run (pause excluded), in milliseconds */
     private long sessionActiveMs;
-    /** Peak of instant and overall WPM observed this run. */
+    /** Peak of instant and overall WPM observed this run */
     private int peakWpmRun;
-    /** Highest run level (from line clears) reached this run. */
+    /** Highest run level (from line clears) reached this run */
     private int peakLevelRun;
-    /** Words fully typed and unlocked this run. */
+    /** Words fully typed and unlocked this run */
     private int wordsTypedRun;
 
-    /** Matches instructions: Time freeze, Easy words, Block buster — earned after flawless word streaks. */
+    /** Matches instructions: Time freeze, Easy words, Block buster — earned after flawless word streaks */
     private static final int FLAWLESS_WORDS_PER_CHARGE = 5;
     private static final double TIME_FREEZE_DURATION_SEC = 4.0;
     private static final int EASY_WORD_SPAWN_COUNT = 3;
@@ -214,14 +195,18 @@ public final class GameplayModel {
     private int powerupCharges;
     private double timeFreezeSecRemaining;
     private int easyWordSpawnsRemaining;
-    /** Clears nearby locked cells on the next lock (piece footprint preserved). */
+    /** Clears nearby locked cells on the next lock (piece footprint preserved) */
     private boolean blockBusterNextLock;
 
     private int lives = STARTING_LIVES;
 
     /**
-     * Prepares parameters and listener wiring only. Call {@link #startRound()} after the view holds
-     * {@code this} so listener methods never run while the UI field is still {@code null}.
+     * Creates a model for one run; call {@link #startRound()} after the view stores this instance
+     *
+     * @param tier difficulty tier
+     * @param subLevel sub-level from 1 to 3
+     * @param bestFromPrefs best score to show in the HUD at start
+     * @param listener callbacks for repaint, HUD, audio, and game over
      */
     public GameplayModel(String tier, int subLevel, int bestFromPrefs, Listener listener) {
         this.tier = tier == null ? "easy" : tier;
@@ -234,7 +219,7 @@ public final class GameplayModel {
         // UI has stored a reference to this model (see startRound()).
     }
 
-    /** First spawn + HUD; call once after the UI holds a reference to this model. */
+    /** First spawn + HUD; call once after the UI holds a reference to this model */
     public void startRound() {
         if (over) {
             return;
@@ -259,7 +244,7 @@ public final class GameplayModel {
     public int getLineStreak()   { return lineStreak;   }
     public int getMult()         { return mult;         }
 
-    /** Live best — always at least the current run score so the HUD never shows a lower value. */
+    /** Live best — always at least the current run score so the HUD never shows a lower value */
     public int getBestDisplayed() { return Math.max(best, score); }
 
     public int runLevelFromLines() {
@@ -279,7 +264,7 @@ public final class GameplayModel {
 
     /**
      * Overall WPM across the whole run — maps to {@code #hud-wpm-overall} in the HTML
-     * (the small "Overall: X WPM" sub-label beneath the large live counter).
+     * (the small "Overall: X WPM" sub-label beneath the large live counter)
      */
     public int wpmOverall() {
         double elapsedSec = typingClockMs / 1000.0;
@@ -289,7 +274,7 @@ public final class GameplayModel {
 
     /**
      * Instant/live WPM for the current typing segment — maps to {@code #hud-wpm} in the HTML
-     * (the large WPM counter shown prominently in the GAME INFO panel).
+     * (the large WPM counter shown prominently in the GAME INFO panel)
      */
     public int wpmInstant() {
         if (!canTypeNow() || piece == null) return 0;
@@ -308,17 +293,17 @@ public final class GameplayModel {
         return sessionActiveMs;
     }
 
-    /** Peak WPM (max of instant vs overall) observed this run. */
+    /** Peak WPM (max of instant vs overall) observed this run */
     public int getPeakWpmRun() {
         return peakWpmRun;
     }
 
-    /** Highest level reached this run (from lines cleared). */
+    /** Highest level reached this run (from lines cleared) */
     public int getPeakLevelRun() {
         return peakLevelRun;
     }
 
-    /** Words completed (typed and unlocked) this run. */
+    /** Words completed (typed and unlocked) this run */
     public int getWordsTypedRun() {
         return wordsTypedRun;
     }
@@ -335,7 +320,7 @@ public final class GameplayModel {
         return powerupCharges;
     }
 
-    /** Progress toward the next charge (0 until the fifth flawless word in a row). */
+    /** Progress toward the next charge (0 until the fifth flawless word in a row) */
     public int getFlawlessStreakProgress() {
         return flawlessWordStreak;
     }
@@ -357,7 +342,7 @@ public final class GameplayModel {
     }
 
     /**
-     * Slows gravity for a few seconds (instructions: Time freeze).
+     * Slows gravity for a few seconds (instructions: Time freeze)
      *
      * @return false if no charge or cannot use now
      */
@@ -372,7 +357,7 @@ public final class GameplayModel {
     }
 
     /**
-     * Next spawns use shorter words (instructions: Easy words).
+     * Next spawns use shorter words (instructions: Easy words)
      */
     public boolean activateEasyWords() {
         if (over || paused || powerupCharges <= 0) {
@@ -385,7 +370,7 @@ public final class GameplayModel {
     }
 
     /**
-     * Next lock clears nearby stack cells (instructions: Block buster).
+     * Next lock clears nearby stack cells (instructions: Block buster)
      */
     public boolean activateBlockBuster() {
         if (over || paused || powerupCharges <= 0) {
@@ -428,8 +413,8 @@ public final class GameplayModel {
     // ── gravity simulation ───────────────────────────────────────────────────
 
     /**
-     * Advance the simulation by {@code dt} seconds. Call at ~60 Hz from the game timer.
-     * Applies gravity and locks the piece when it can no longer fall.
+     * Advance the simulation by {@code dt} seconds; call at ~60 Hz from the game timer
+     * Applies gravity and locks the piece when it can no longer fall
      */
     public void tick(double dt) {
         updateTypingClock();
@@ -464,7 +449,7 @@ public final class GameplayModel {
         return params.fallRowsPerSec() + (lv - 1) * 0.15;
     }
 
-    /** {@code Math.min(5, 1 + Math.floor(s / 2))} — same as {@code gameplay.js} {@code multFromStreak}. */
+    /** {@code Math.min(5, 1 + Math.floor(s / 2))} — same as {@code gameplay.js} {@code multFromStreak} */
     private static int multFromStreak(int s) {
         return Math.min(5, 1 + Math.floorDiv(s, 2));
     }
@@ -472,13 +457,11 @@ public final class GameplayModel {
     // ── typing phase ─────────────────────────────────────────────────────────
 
     /**
-     * Feed the current typing-field text into the model (uppercase, A–Z only).
-     * Called from the {@code DocumentListener} on every keystroke.
-     * The model filters non-alpha characters itself for safety.
-     */
-    /**
-     * Same algorithm as {@code onTypingInput} in {@code web/assets/js/gameplay.js}: uppercase A–Z only,
-     * longest matching prefix, one wrong-stroke per bad edit, then {@code lastTypedLen} / score / unlock.
+     * Processes text from the Swing typing field; mirrors {@code onTypingInput} in {@code gameplay.js}
+     * Uppercase A–Z only, longest correct prefix, one wrong-stroke (and life loss) per bad edit, then
+     * {@code lastTypedLen} / scoring / unlock when the word matches
+     *
+     * @param rawUppercase contents of the field (non-letters are stripped)
      */
     public void onTypingFieldChanged(String rawUppercase) {
         // Web: if (state.paused || state.over || !state.piece || state.piece.unlocked) return;
@@ -554,19 +537,19 @@ public final class GameplayModel {
 
     // ── movement / rotation / drop ───────────────────────────────────────────
 
-    /** Move piece one column left (only when unlocked). */
+    /** Move piece one column left (only when unlocked) */
     public void onArrowLeft()  { tryMove(-1); }
 
-    /** Move piece one column right (only when unlocked). */
+    /** Move piece one column right (only when unlocked) */
     public void onArrowRight() { tryMove(1); }
 
-    /** Rotate piece clockwise (only when unlocked). Maps to ↑ key per gameplay.html instructions. */
+    /** Rotate piece clockwise (only when unlocked); maps to ↑ key per gameplay.html instructions */
     public void onArrowUp()    { tryRotate(false); }
 
-    /** Rotate piece counter-clockwise (only when unlocked). Maps to ↓ key per gameplay.html instructions. */
+    /** Rotate piece counter-clockwise (only when unlocked); maps to ↓ key per gameplay.html instructions */
     public void onArrowDown()  { tryRotate(true); }
 
-    /** Soft-drop and lock the piece immediately (only when unlocked). Maps to Space per gameplay.html. */
+    /** Soft-drop and lock the piece immediately (only when unlocked); maps to Space per gameplay.html */
     public void onSpace() {
         if (piece != null && piece.unlocked && !over && !paused) {
             listener.onAudioUserActivity();
@@ -620,6 +603,7 @@ public final class GameplayModel {
 
     // ── locking, line clear, spawn ────────────────────────────────────────────
 
+    /** Merge active piece into the grid, clear lines, spawn next piece or end the run (top-out / lives) */
     private void lockFromGround() {
         updateTypingClock();
         if (piece == null || over) return;
@@ -660,7 +644,7 @@ public final class GameplayModel {
     }
 
     /**
-     * Clears locked cells within Chebyshev radius of the piece center, excluding the merged footprint.
+     * Clears locked cells within Chebyshev radius of the piece center, excluding the merged footprint
      */
     private void applyBlockBusterBlast(Set<String> mergedFootprint) {
         if (mergedFootprint.isEmpty()) {
@@ -714,7 +698,7 @@ public final class GameplayModel {
 
     /**
      * Scan bottom-up for full rows, collapse with {@link System#arraycopy}, then score with streak
-     * multiplier. Resets streak to 0 if no lines were cleared this piece.
+     * multiplier; resets streak to 0 if no lines were cleared this piece
      */
     private void clearFullLines() {
         int cleared = 0;
@@ -759,7 +743,7 @@ public final class GameplayModel {
         listener.onGameOver();
     }
 
-    /** New random word shaped as a tetromino-style piece; immediate collision triggers game over. */
+    /** New random word shaped as a tetromino-style piece; immediate collision triggers game over */
     private void spawnPiece() {
         updateTypingClock();
         mistakeOnCurrentWord = false;
@@ -946,7 +930,7 @@ public final class GameplayModel {
 
     /**
      * Label for the CONTROLS / phase indicator in the GAME INFO panel
-     * ({@code #hud-control-phase} in gameplay.html).
+     * ({@code #hud-control-phase} in gameplay.html)
      */
     public String controlPhaseLabel() {
         if (piece == null) return "—";
@@ -955,7 +939,7 @@ public final class GameplayModel {
 
     /**
      * Text that should appear in the typing input field — the correctly typed prefix of the
-     * target word. Empty when the piece is unlocked (web clears the field at that point).
+     * target word; empty when the piece is unlocked (web clears the field at that point)
      */
     public String currentTypingDisplay() {
         if (piece == null || piece.unlocked) return "";
@@ -963,13 +947,20 @@ public final class GameplayModel {
     }
 
     /**
-     * The word on the currently falling piece; {@code null} when no piece is active.
-     * Shown below the board as {@code #falling-word-hint} in gameplay.html.
+     * The word on the currently falling piece; {@code null} when no piece is active
+     * Shown below the board as {@code #falling-word-hint} in gameplay.html
      */
     public String fallingWordHint() {
         return (piece != null && !piece.unlocked) ? piece.word : "";
     }
 
-    public String tier()    { return tier;     }
-    public int    subLevel(){ return subLevel; }
+    /** Difficulty tier string used when this run was started (for example easy / medium / hard) */
+    public String tier() {
+        return tier;
+    }
+
+    /** Sub-level within the tier (1–3) */
+    public int subLevel() {
+        return subLevel;
+    }
 }

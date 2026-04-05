@@ -14,10 +14,10 @@ import javax.sound.sampled.LineEvent;
 
 /**
  * Procedural SFX + light BGM matching {@code web/assets/js/gameplay.js} (Web Audio API): block land,
- * row clear, typing error, power-up, chord stabs at 96 BPM, pause ducking, stop on game over.
+ * row clear, typing error, power-up, chord stabs at 96 BPM, pause ducking, stop on game over
  * <p>
- * Uses short {@link Clip} bursts only — no external sound files. Safe to construct once per
- * {@link GameplayPanel}; call {@link #shutdown()} when leaving gameplay.
+ * Uses short {@link Clip} bursts only — no external sound files; safe to construct once per
+ * {@link GameplayPanel}; call {@link #shutdown()} when leaving gameplay
  */
 public final class GameplayAudio {
 
@@ -25,7 +25,7 @@ public final class GameplayAudio {
     private static final AudioFormat FORMAT =
             new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, SAMPLE_RATE, 16, 1, 2, SAMPLE_RATE, false);
 
-    /** Half-step between chord hits in JS: {@code beat * 0.5} at 96 BPM. */
+    /** Half-step between chord hits in JS: {@code beat * 0.5} at 96 BPM */
     private static final long BGM_STEP_MS = Math.round(500 * 60.0 / 96.0);
 
     private static final double[][] BGM_CHORDS = {
@@ -41,13 +41,13 @@ public final class GameplayAudio {
     private ScheduledFuture<?> bgmFuture;
     private int bgmChordIndex;
 
-    /** 1.0 = normal; when paused, matches JS ratio {@code 0.05 / 0.28}. */
+    /** 1.0 = normal; when paused, matches JS ratio {@code 0.05 / 0.28} */
     private volatile double bgmDuckFactor = 1.0;
 
     public GameplayAudio() {
     }
 
-    /** Starts BGM scheduling on first call; first chord runs without extra delay. */
+    /** Starts BGM scheduling on first call; first chord runs without extra delay */
     public void ensureStarted() {
         synchronized (startLock) {
             if (started) {
@@ -64,12 +64,12 @@ public final class GameplayAudio {
         }
     }
 
-    /** JS {@code setBgmPaused}: quieter chords while paused. */
+    /** JS {@code setBgmPaused}: quieter chords while paused */
     public void setBgmPaused(boolean paused) {
         bgmDuckFactor = paused ? (0.05 / 0.28) : 1.0;
     }
 
-    /** JS {@code stopBgm} on game over. */
+    /** JS {@code stopBgm} on game over */
     public void stopBgm() {
         synchronized (startLock) {
             if (bgmFuture != null) {
@@ -84,7 +84,7 @@ public final class GameplayAudio {
         }
     }
 
-    /** Cancel BGM thread when leaving the gameplay screen. */
+    /** Cancel BGM thread when leaving the gameplay screen */
     public void shutdown() {
         stopBgm();
     }
@@ -150,7 +150,7 @@ public final class GameplayAudio {
         return Math.max(1, (int) (SAMPLE_RATE * ms / 1000.0));
     }
 
-    /** Three sines with per-sample exponential envelope (attack + decay), same spirit as JS. */
+    /** Three sines with per-sample exponential envelope (attack + decay), same spirit as JS */
     private static byte[] renderChordSine(double[] freqs, int samples, double chordDur, double peakAmp) {
         double[] acc = new double[samples];
         double attack = Math.min(0.03, chordDur * 0.2);

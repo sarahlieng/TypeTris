@@ -9,42 +9,45 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Tracks allowed play windows and time-based usage statistics.
+ * Tracks allowed play windows and time-based usage statistics
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class ParentalControl {
     private final List<TimeRange> allowedPlayWindows = new ArrayList<>();
     private final List<Duration> sessionDurations = new ArrayList<>();
 
     /**
-     * Adds a permitted play window.
+     * Adds a permitted play window
+     *
+     * @param range allowed hours; must not be {@code null}
      */
     public void addAllowedPlayWindow(TimeRange range) {
         allowedPlayWindows.add(Objects.requireNonNull(range, "range must not be null"));
     }
 
-    /**
-     * Clears all permitted play windows.
-     */
+    /** Removes every configured play window (play is unrestricted until new windows are added) */
     public void clearAllowedPlayWindows() {
         allowedPlayWindows.clear();
     }
 
     /**
-     * Returns an immutable view of configured play windows.
+     * @return an unmodifiable list of configured play windows
      */
     public List<TimeRange> getAllowedPlayWindows() {
         return Collections.unmodifiableList(allowedPlayWindows);
     }
 
     /**
-     * Returns true if no windows are configured or current time is inside any window.
+     * @return {@code true} if no windows are configured or the current clock time falls in a window
      */
     public boolean isPlayAllowedNow() {
         return isPlayAllowedAt(LocalTime.now());
     }
 
     /**
-     * Returns true if no windows are configured or {@code time} is inside any window.
+     * @param time clock time to evaluate
+     * @return {@code true} if no windows are configured or {@code time} lies in a window
      */
     public boolean isPlayAllowedAt(LocalTime time) {
         Objects.requireNonNull(time, "time must not be null");
@@ -60,7 +63,10 @@ public final class ParentalControl {
     }
 
     /**
-     * Records a completed session.
+     * Records a completed session length
+     *
+     * @param sessionDuration non-negative duration
+     * @throws IllegalArgumentException if {@code sessionDuration} is negative
      */
     public void recordSession(Duration sessionDuration) {
         Duration safeDuration = Objects.requireNonNull(sessionDuration, "sessionDuration must not be null");
@@ -71,7 +77,11 @@ public final class ParentalControl {
     }
 
     /**
-     * Utility to record a session from start/end timestamps.
+     * Records a session as the duration between two instants
+     *
+     * @param startedAt session start
+     * @param endedAt session end (must not be before {@code startedAt})
+     * @throws IllegalArgumentException if {@code endedAt} is before {@code startedAt}
      */
     public void recordSession(LocalDateTime startedAt, LocalDateTime endedAt) {
         Objects.requireNonNull(startedAt, "startedAt must not be null");
@@ -83,10 +93,16 @@ public final class ParentalControl {
         sessionDurations.add(sessionDuration);
     }
 
+    /**
+     * @return how many sessions have been recorded
+     */
     public int getSessionCount() {
         return sessionDurations.size();
     }
 
+    /**
+     * @return sum of all recorded session lengths
+     */
     public Duration getTotalSessionTime() {
         Duration total = Duration.ZERO;
         for (Duration duration : sessionDurations) {
@@ -96,7 +112,7 @@ public final class ParentalControl {
     }
 
     /**
-     * Returns zero when no sessions have been recorded.
+     * @return mean session length, or zero when no sessions have been recorded
      */
     public Duration getAverageSessionTime() {
         if (sessionDurations.isEmpty()) {
@@ -106,7 +122,7 @@ public final class ParentalControl {
     }
 
     /**
-     * Returns an immutable view of all recorded session durations.
+     * @return an unmodifiable list of each recorded session duration
      */
     public List<Duration> getSessionDurations() {
         return Collections.unmodifiableList(sessionDurations);

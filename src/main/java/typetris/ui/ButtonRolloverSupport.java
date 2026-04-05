@@ -7,7 +7,7 @@ import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 
 /**
- * Temporary hover / press background feedback for flat-styled {@link JButton}s (restores idle color on exit).
+ * Temporary hover / press background feedback for flat-styled {@link JButton}s (restores idle color on exit)
  */
 public final class ButtonRolloverSupport {
 
@@ -18,7 +18,7 @@ public final class ButtonRolloverSupport {
 
     /**
      * Installs mouse listeners that brighten on hover and darken while pressed; always returns to {@code normalBg}
-     * when the pointer leaves or the button is disabled.
+     * when the pointer leaves or the button is disabled
      */
     public static void install(JButton b, Color normalBg) {
         if (Boolean.TRUE.equals(b.getClientProperty(INSTALLED))) {

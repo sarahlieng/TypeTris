@@ -2,7 +2,9 @@ package typetris.ui;
 
 /**
  * Central constants for {@link java.awt.CardLayout} screen names when the full multi-card shell
- * (menu, gameplay, game over, logout flow, etc.) is wired up. Keeps navigation stringly-typed in one place.
+ * (menu, gameplay, game over, logout flow, etc.) is wired up; keeps navigation stringly-typed in one place
+ *
+ * @author CS2212 Group 26, Western University
  */
 public final class Screens {
     public static final String MENU = "menu";
@@ -20,6 +22,7 @@ public final class Screens {
     public static final String LOGOUT_CONFIRM = "logoutConfirm";
     public static final String LOGOUT_SUCCESS = "logoutSuccess";
 
+    /** Prevents instantiation; use only the {@code public static final} name constants */
     private Screens() {
     }
 }

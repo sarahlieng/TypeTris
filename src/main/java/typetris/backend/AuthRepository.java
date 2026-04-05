@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * SQLite-backed repository for account creation and authentication.
+ * SQLite-backed repository for account creation and authentication
  * 
  * @author CS2212 Group 26, Western University
  */
@@ -32,11 +32,11 @@ public final class AuthRepository {
     }
 
     /**
-     * Initializes table schema.
+     * Initializes table schema
      *
      * <p>Because the project may be run multiple times against an existing local
      * SQLite DB, this method also performs a lightweight schema update for the
-     * stats columns used by the dashboard UI.
+     * stats columns used by the dashboard UI
      */
     public void init() throws SQLException {
         String userSql = """
@@ -77,7 +77,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Checks for existence of a column using SQLite PRAGMA table_info.
+     * Checks for existence of a column using SQLite PRAGMA table_info
      */
     private static boolean tableColumnExists(Connection c, String table, String column) throws SQLException {
         try (ResultSet rs = c.createStatement().executeQuery("PRAGMA table_info(" + table + ")")) {
@@ -92,7 +92,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Adds a column via ALTER TABLE if it doesn't exist (used for local DB migrations).
+     * Adds a column via ALTER TABLE if it doesn't exist (used for local DB migrations)
      */
     private static void ensureColumnExists(Connection c, String table, String column, String columnDefinition) throws SQLException {
         if (tableColumnExists(c, table, column)) {
@@ -104,7 +104,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Inserts a user account.
+     * Inserts a user account
      */
     public CreateUserResult createUser(String email, String username, String passwordHash, String salt) throws SQLException {
         String sql = "INSERT INTO users(email, username, password_hash, salt) VALUES(?,?,?,?)";
@@ -139,7 +139,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Loads credentials by username.
+     * Loads credentials by username
      */
     public UserCredentials findByUsername(String username) throws SQLException {
         String sql = "SELECT username, password_hash, salt FROM users WHERE username = ?";
@@ -159,7 +159,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Records a new session start for a user.
+     * Records a new session start for a user
      */
     public void recordSessionStart(String username) throws SQLException {
         String sql = "INSERT INTO session_history(username) VALUES(?)";
@@ -171,7 +171,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Returns all session history records ordered newest-first.
+     * Returns all session history records ordered newest-first
      */
     public List<SessionHistory> listSessionHistory() throws SQLException {
         String sql = "SELECT id, username, started_at FROM session_history ORDER BY started_at DESC, id DESC";
@@ -190,7 +190,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Returns all user accounts ordered by username.
+     * Returns all user accounts ordered by username
      */
     public List<UserAccount> listUserAccounts() throws SQLException {
         String sql = """
@@ -220,7 +220,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Updates rolling stats after a finished run. {@code accuracyPercent} is 0–100.
+     * Updates rolling stats after a finished run; {@code accuracyPercent} is 0–100
      */
     public void recordGameResult(String username, CompletedRunStats run) throws SQLException {
         if (username == null || username.isBlank() || run == null) {
@@ -321,7 +321,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Loads leaderboard entries ordered by global high score.
+     * Loads leaderboard entries ordered by global high score
      */
     public List<PlayerAccount> fetchLeaderboard(int limit) throws SQLException {
         int safeLimit = Math.max(1, Math.min(limit, 100));
@@ -356,7 +356,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Deletes an account by username.
+     * Deletes an account by username
      */
     public boolean deleteUserByUsername(String username) throws SQLException {
         String sql = "DELETE FROM users WHERE username = ?";
@@ -368,7 +368,7 @@ public final class AuthRepository {
     }
 
     /**
-     * Resets account password hash+salt for username.
+     * Resets account password hash+salt for username
      */
     public boolean resetPasswordByUsername(String username, String passwordHash, String salt) throws SQLException {
         String sql = "UPDATE users SET password_hash = ?, salt = ? WHERE username = ?";
@@ -383,7 +383,7 @@ public final class AuthRepository {
 
     /**
      * Clears high scores, best WPM, rolling average accuracy, and games played for every account
-     * (leaderboard / personal stats reset). Does not delete users or session history.
+     * (leaderboard / personal stats reset); does not delete users or session history
      *
      * @return number of rows updated
      */
